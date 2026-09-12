@@ -1,18 +1,17 @@
 /**
- * Координати тексту на interactive-board-print.pdf (pt, pdf-lib: знизу-ліворуч).
- * Знято з Excel ExportAsFixedFormat при заповненому рядку 10 / 14.
- * Перегенерація: tools/calibrate_pdf_placements.py (Windows + Excel).
+ * Рамки комірок на interactive-board-print.pdf (pt, origin знизу-ліворуч).
+ * Знято з ліній сітки PDF-шаблону (Excel ExportAsFixedFormat).
  */
-export const INTERACTIVE_BOARD_PDF_PLACEMENTS = {
-  B10: { x: 127.46, y: 632.71, size: 8, maxWidth: 102, lineHeight: 9 },
-  C10: { x: 236.09, y: 632.71, size: 8, maxWidth: 86, lineHeight: 9 },
-  D10: { x: 328.27, y: 632.71, size: 8, maxWidth: 100, lineHeight: 9 },
-  E10: { x: 436.54, y: 632.71, size: 8, maxWidth: 52, lineHeight: 9 },
-  F10: { x: 476.0, y: 632.71, size: 8, maxWidth: 42, lineHeight: 9 },
+export const INTERACTIVE_BOARD_PDF_CELLS = {
+  B10: { x: 95.16, y: 642.79, w: 95.18, h: 42.26 },
+  C10: { x: 190.34, y: 642.79, w: 115.95, h: 42.26 },
+  D10: { x: 306.29, y: 642.79, w: 102.5, h: 42.26 },
+  E10: { x: 408.79, y: 642.79, w: 42.5, h: 42.26 },
+  F10: { x: 451.29, y: 642.79, w: 38.53, h: 42.26 },
 
-  B14: { x: 97.344, y: 546.91, size: 8, maxWidth: 90, lineHeight: 9 },
-  C14: { x: 192.62, y: 540.91, size: 8, maxWidth: 152, lineHeight: 9 },
-  D14: { x: 351.43, y: 541.15, size: 8, maxWidth: 88, lineHeight: 9 },
-  E14: { x: 444.94, y: 541.15, size: 7.5, maxWidth: 48, lineHeight: 8.5 },
-  F14: { x: 476.0, y: 546.91, size: 6.5, maxWidth: 42, lineHeight: 7.5 },
+  B14: { x: 95.16, y: 570.55, w: 95.18, h: 45.6 },
+  C14: { x: 190.34, y: 570.55, w: 115.95, h: 45.6 },
+  D14: { x: 306.29, y: 570.55, w: 102.5, h: 45.6 },
+  E14: { x: 408.79, y: 570.55, w: 42.5, h: 45.6 },
+  F14: { x: 451.29, y: 570.55, w: 38.53, h: 45.6 },
 };

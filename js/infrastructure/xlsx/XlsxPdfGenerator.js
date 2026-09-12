@@ -1,9 +1,23 @@
-import { PDFDocument, rgb } from "../../../vendor/pdf-lib.esm.min.js";
+import { PDFDocument } from "../../../vendor/pdf-lib.esm.min.js";
 import fontkit from "../../../vendor/fontkit.es.js";
-import { INTERACTIVE_BOARD_PDF_PLACEMENTS } from "./interactiveBoardPdfPlacements.js";
+import { INTERACTIVE_BOARD_PDF_CELLS } from "./interactiveBoardPdfPlacements.js";
+import { drawTextInCell } from "./pdfCellText.js";
 
 let cachedFontBytes = null;
 let cachedPdfTemplate = null;
+
+const CELL_STYLE = {
+  B10: { maxSize: 8, minSize: 6 },
+  C10: { maxSize: 8, minSize: 6 },
+  D10: { maxSize: 8, minSize: 6 },
+  E10: { maxSize: 7.5, minSize: 6 },
+  F10: { maxSize: 7.5, minSize: 6 },
+  B14: { maxSize: 8, minSize: 5.5 },
+  C14: { maxSize: 7.5, minSize: 5 },
+  D14: { maxSize: 8, minSize: 6 },
+  E14: { maxSize: 7, minSize: 5.5 },
+  F14: { maxSize: 6, minSize: 4.5 },
+};
 
 function isFontBinary(bytes) {
   if (!bytes?.byteLength) return false;
@@ -42,14 +56,12 @@ async function loadPdfTemplate(file) {
   const res = await fetch(`/forms/templates/${file}`);
   if (!res.ok) {
     throw new Error(
-      "PDF-шаблон не знайдено (forms/templates/interactive-board-print.pdf). Зробіть push і redeploy.",
+      "PDF-шаблон не знайдено (forms/templates/interactive-board-print.pdf).",
     );
   }
   const bytes = new Uint8Array(await res.arrayBuffer());
   if (!isPdfBinary(bytes)) {
-    throw new Error(
-      "Замість PDF сервер віддав HTML (404). Перевірте interactive-board-print.pdf на хостингу.",
-    );
+    throw new Error("Замість PDF сервер віддав HTML (404).");
   }
   cachedPdfTemplate = { name: file, bytes };
   return bytes;
@@ -85,18 +97,11 @@ export class XlsxPdfGenerator {
       const text = String(values[field.id] ?? "").trim();
       if (!text) continue;
 
-      const placement = INTERACTIVE_BOARD_PDF_PLACEMENTS[field.cell];
-      if (!placement) continue;
+      const box = INTERACTIVE_BOARD_PDF_CELLS[field.cell];
+      if (!box) continue;
 
-      page.drawText(text, {
-        x: placement.x,
-        y: placement.y,
-        size: placement.size,
-        font,
-        color: rgb(0, 0, 0),
-        maxWidth: placement.maxWidth,
-        lineHeight: placement.lineHeight ?? placement.size + 1,
-      });
+      const style = CELL_STYLE[field.cell] ?? { maxSize: 8, minSize: 5 };
+      drawTextInCell(page, font, text, box, style);
     }
 
     const bytes = await pdf.save();
