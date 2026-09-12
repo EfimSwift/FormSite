@@ -1,5 +1,1 @@
-# Локальні копії (Windows Arial — tools/copy-pdf-font.ps1)
-Arial.ttf
-
-# Шрифт у репозиторії для офлайн / Cloudflare (SIL Open Font License)
-!DejaVuSans.ttf
+# Шрифты для PDF коммитьте в git (нужны на workers.dev)

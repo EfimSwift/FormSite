@@ -3,21 +3,35 @@ import fontkit from "../../../vendor/fontkit.es.js";
 
 let cachedFontBytes = null;
 
+function isFontBinary(bytes) {
+  if (!bytes || bytes.byteLength < 4) return false;
+  const v = new Uint8Array(bytes);
+  const ttf = v[0] === 0 && v[1] === 1 && v[2] === 0 && v[3] === 0;
+  const otto =
+    v[0] === 0x4f && v[1] === 0x54 && v[2] === 0x54 && v[3] === 0x4f;
+  const woff =
+    v[0] === 0x77 && v[1] === 0x4f && v[2] === 0x46 && v[3] === 0x46;
+  return ttf || otto || woff;
+}
+
 async function loadBodyFont(pdf) {
   if (!cachedFontBytes) {
-    const paths = ["/fonts/DejaVuSans.ttf", "/fonts/Arial.ttf"];
-    let lastErr = null;
+    const paths = [
+      "/fonts/Arial.ttf",
+      "/fonts/DejaVuSans.ttf",
+      "/vendor/fonts/Arial.ttf",
+    ];
     for (const url of paths) {
       const res = await fetch(url);
-      if (res.ok) {
-        cachedFontBytes = await res.arrayBuffer();
-        break;
-      }
-      lastErr = url;
+      if (!res.ok) continue;
+      const buf = await res.arrayBuffer();
+      if (!isFontBinary(buf)) continue;
+      cachedFontBytes = buf;
+      break;
     }
     if (!cachedFontBytes) {
       throw new Error(
-        "Немає шрифту для PDF. Додайте fonts/DejaVuSans.ttf (python tools/fetch_dejavu_font.py) або Arial (tools/copy-pdf-font.ps1).",
+        "Шрифт для PDF не знайдено (або сервер віддав HTML замість .ttf). Додайте fonts/Arial.ttf у репозиторій і зробіть push.",
       );
     }
   }
