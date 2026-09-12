@@ -11,12 +11,12 @@ const CELL_STYLE = {
   C10: { maxSize: 8, minSize: 6 },
   D10: { maxSize: 8, minSize: 6 },
   E10: { maxSize: 7.5, minSize: 6 },
-  F10: { maxSize: 7.5, minSize: 6 },
+  F10: { maxSize: 7, minSize: 5.5 },
   B14: { maxSize: 8, minSize: 5.5 },
   C14: { maxSize: 7.5, minSize: 5 },
   D14: { maxSize: 8, minSize: 6 },
   E14: { maxSize: 7, minSize: 5.5 },
-  F14: { maxSize: 6, minSize: 4.5 },
+  F14: { maxSize: 5.5, minSize: 4 },
 };
 
 function isFontBinary(bytes) {
@@ -44,7 +44,7 @@ async function loadBodyFont(pdf) {
     throw new Error("Потрібен fonts/Arial.ttf у репозиторії");
   }
   pdf.registerFontkit(fontkit);
-  return pdf.embedFont(new Uint8Array(cachedFontBytes), { subset: false });
+  return pdf.embedFont(new Uint8Array(cachedFontBytes), { subset: true });
 }
 
 function isPdfBinary(bytes) {
@@ -65,6 +65,13 @@ async function loadPdfTemplate(file) {
   }
   cachedPdfTemplate = { name: file, bytes };
   return bytes;
+}
+
+/** Лишаємо тільки 1-й аркуш (старий шаблон міг мати 2). */
+function ensureSinglePage(pdf) {
+  while (pdf.getPageCount() > 1) {
+    pdf.removePage(pdf.getPageCount() - 1);
+  }
 }
 
 function downloadFileName(docId, fio) {
@@ -89,6 +96,8 @@ export class XlsxPdfGenerator {
       documentDef.pdfTemplateFile ?? "interactive-board-print.pdf";
     const templateBytes = await loadPdfTemplate(pdfTemplateFile);
     const pdf = await PDFDocument.load(templateBytes);
+    ensureSinglePage(pdf);
+
     const font = await loadBodyFont(pdf);
     const page = pdf.getPages()[0];
     if (!page) throw new Error("PDF-шаблон без сторінок");
@@ -104,7 +113,7 @@ export class XlsxPdfGenerator {
       drawTextInCell(page, font, text, box, style);
     }
 
-    const bytes = await pdf.save();
+    const bytes = await pdf.save({ useObjectStreams: false });
     return {
       fileName: downloadFileName(documentDef.id, values.fio ?? values.email),
       bytes,

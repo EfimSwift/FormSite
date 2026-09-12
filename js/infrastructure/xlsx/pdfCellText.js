@@ -3,16 +3,33 @@ import { rgb } from "../../../vendor/pdf-lib.esm.min.js";
 function wrapLines(text, font, size, maxWidth) {
   const normalized = String(text).replace(/\s+/g, " ").trim();
   if (!normalized) return [];
-  const words = normalized.split(" ");
+
+  const tokens = normalized.split(" ").flatMap((word) => {
+    if (font.widthOfTextAtSize(word, size) <= maxWidth) return [word];
+    const parts = [];
+    let chunk = "";
+    for (const ch of word) {
+      const next = chunk + ch;
+      if (font.widthOfTextAtSize(next, size) <= maxWidth || !chunk) {
+        chunk = next;
+      } else {
+        parts.push(chunk);
+        chunk = ch;
+      }
+    }
+    if (chunk) parts.push(chunk);
+    return parts;
+  });
+
   const lines = [];
   let line = "";
-  for (const word of words) {
-    const candidate = line ? `${line} ${word}` : word;
+  for (const token of tokens) {
+    const candidate = line ? `${line} ${token}` : token;
     if (font.widthOfTextAtSize(candidate, size) <= maxWidth || !line) {
       line = candidate;
     } else {
       lines.push(line);
-      line = word;
+      line = token;
     }
   }
   if (line) lines.push(line);
