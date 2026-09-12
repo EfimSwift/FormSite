@@ -26,6 +26,51 @@ def make_blank_data_xlsx() -> None:
     BLANK_DATA.write_bytes(fill_workbook(TEMPLATE.read_bytes(), clears))
 
 
+def fix_signature_block_in_workbook(xlsx: Path) -> None:
+    """Лівий текст A17:E18 (перенос як у шаблоні), звання F17:F18 зверху праворуч."""
+    ps = rf"""
+$xl = New-Object -ComObject Excel.Application
+$xl.Visible = $false
+$xl.DisplayAlerts = $false
+$wb = $xl.Workbooks.Open('{xlsx.resolve()}')
+$ws = $wb.Worksheets.Item(1)
+$left = $ws.Range('A17').Value2
+if ($null -eq $left -or "$left".Length -eq 0) {{ $left = $ws.Range('A17').Text }}
+$rightRaw = [string]$ws.Range('A18').Value2
+$right = $rightRaw.Trim()
+if ($right.Length -eq 0) {{ $right = 'полковник' }}
+
+try {{ $ws.Range('A18:F18').UnMerge() }} catch {{ }}
+foreach ($addr in @('B17','C17','D17','E17','F17','B18','C18','D18','E18','F18')) {{
+  $ws.Range($addr).UnMerge() | Out-Null
+  $ws.Range($addr).Clear()
+}}
+
+$ws.Range('A17:E18').Merge() | Out-Null
+$ws.Range('A17').Value2 = $left
+$ws.Range('A17:E18').WrapText = $true
+$ws.Range('A17:E18').VerticalAlignment = -4160
+$ws.Range('A17:E18').HorizontalAlignment = -4131
+
+$ws.Range('F17:F18').Merge() | Out-Null
+$ws.Range('F17').Value2 = $right
+$ws.Range('F17:F18').WrapText = $false
+$ws.Range('F17:F18').VerticalAlignment = -4160
+$ws.Range('F17:F18').HorizontalAlignment = -4152
+
+$ws.Rows('17:18').EntireRow.AutoFit() | Out-Null
+$wb.Save()
+$wb.Close($false)
+$xl.Quit()
+"""
+    subprocess.run(
+        ["powershell", "-NoProfile", "-Command", ps],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+
 def export_pdf_one_page(xlsx: Path, pdf: Path) -> None:
     ps = rf"""
 $xl = New-Object -ComObject Excel.Application
@@ -43,10 +88,6 @@ $ps.LeftMargin = $xl.InchesToPoints(0.7)
 $ps.RightMargin = $xl.InchesToPoints(0.7)
 $ps.TopMargin = $xl.InchesToPoints(0.75)
 $ps.BottomMargin = $xl.InchesToPoints(0.75)
-# Підписи під таблицею: верхній край лівого й правого блоків на одній лінії (лише шаблон).
-$ws.Rows('17:18').VerticalAlignment = -4160
-$ws.Range('A17').WrapText = $true
-$ws.Range('A17').HorizontalAlignment = -4131
 $ws.ExportAsFixedFormat(0, '{pdf.resolve()}')
 $wb.Close($false)
 $xl.Quit()
@@ -151,6 +192,7 @@ def write_js(cells: dict[str, dict[str, float]]) -> None:
 
 
 def main() -> None:
+    fix_signature_block_in_workbook(TEMPLATE)
     make_blank_data_xlsx()
     export_pdf_one_page(BLANK_DATA, OUT_PDF)
     n = page_count(OUT_PDF)
