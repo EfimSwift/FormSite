@@ -1,31 +1,9 @@
 import { PDFDocument, rgb } from "../../../vendor/pdf-lib.esm.min.js";
 import fontkit from "../../../vendor/fontkit.es.js";
+import { INTERACTIVE_BOARD_PDF_PLACEMENTS } from "./interactiveBoardPdfPlacements.js";
 
 let cachedFontBytes = null;
 let cachedPdfTemplate = null;
-
-/** Координаты ячеек в пунктах Excel (как Range.Left/Top/Width/Height). */
-const CELL_RECTS = {
-  B10: { left: 48, top: 152.4, w: 102, h: 24 },
-  C10: { left: 150, top: 152.4, w: 124.2, h: 24 },
-  D10: { left: 274.2, top: 152.4, w: 109.8, h: 24 },
-  E10: { left: 384, top: 152.4, w: 85.8, h: 24 },
-  F10: { left: 469.8, top: 152.4, w: 75.6, h: 24 },
-  B14: { left: 48, top: 238.2, w: 102, h: 55.8 },
-  C14: { left: 150, top: 238.2, w: 124.2, h: 55.8 },
-  D14: { left: 274.2, top: 238.2, w: 109.8, h: 55.8 },
-  E14: { left: 384, top: 238.2, w: 85.8, h: 55.8 },
-  F14: { left: 469.8, top: 238.2, w: 75.6, h: 55.8 },
-};
-
-/** Параметры печати листа A1:F18 → PDF (ExportAsFixedFormat, Excel). */
-const PRINT_MAP = {
-  pageWidth: 595.2,
-  pageHeight: 841.68,
-  sheetWidth: 545.4,
-  sheetHeight: 349.2,
-  margin: 36,
-};
 
 function isFontBinary(bytes) {
   if (!bytes?.byteLength) return false;
@@ -64,41 +42,17 @@ async function loadPdfTemplate(file) {
   const res = await fetch(`/forms/templates/${file}`);
   if (!res.ok) {
     throw new Error(
-      "PDF-шаблон не знайдено (forms/templates/interactive-board-print.pdf). Зробіть push у git і redeploy.",
+      "PDF-шаблон не знайдено (forms/templates/interactive-board-print.pdf). Зробіть push і redeploy.",
     );
   }
   const bytes = new Uint8Array(await res.arrayBuffer());
   if (!isPdfBinary(bytes)) {
     throw new Error(
-      "Замість PDF сервер віддав HTML (404). Перевірте, що interactive-board-print.pdf задеплоєно.",
+      "Замість PDF сервер віддав HTML (404). Перевірте interactive-board-print.pdf на хостингу.",
     );
   }
   cachedPdfTemplate = { name: file, bytes };
   return bytes;
-}
-
-function printScale() {
-  const { pageWidth, pageHeight, sheetWidth, sheetHeight, margin } = PRINT_MAP;
-  const innerW = pageWidth - margin * 2;
-  const innerH = pageHeight - margin * 2;
-  return Math.min(innerW / sheetWidth, innerH / sheetHeight);
-}
-
-function cellToPdf(rect) {
-  const scale = printScale();
-  const { pageHeight, margin } = PRINT_MAP;
-  const sheetW = PRINT_MAP.sheetWidth * scale;
-  const sheetH = PRINT_MAP.sheetHeight * scale;
-  const offsetX = (PRINT_MAP.pageWidth - sheetW) / 2;
-  const offsetY = (PRINT_MAP.pageHeight - sheetH) / 2;
-
-  const x = offsetX + rect.left * scale + 2;
-  const boxTop = offsetY + rect.top * scale;
-  const boxH = rect.h * scale;
-  const maxWidth = rect.w * scale - 4;
-  const y = pageHeight - (boxTop + boxH * 0.72);
-  const fontSize = boxH > 30 ? 9 : 8;
-  return { x, y, maxWidth, fontSize };
 }
 
 function downloadFileName(docId, fio) {
@@ -127,25 +81,21 @@ export class XlsxPdfGenerator {
     const page = pdf.getPages()[0];
     if (!page) throw new Error("PDF-шаблон без сторінок");
 
-    const { width, height } = page.getSize();
-    if (!Number.isFinite(width) || !Number.isFinite(height)) {
-      throw new Error("Некоректний розмір PDF-шаблону");
-    }
-
     for (const field of documentDef.fields) {
       const text = String(values[field.id] ?? "").trim();
       if (!text) continue;
-      const rect = CELL_RECTS[field.cell];
-      if (!rect) continue;
-      const pos = cellToPdf(rect);
+
+      const placement = INTERACTIVE_BOARD_PDF_PLACEMENTS[field.cell];
+      if (!placement) continue;
+
       page.drawText(text, {
-        x: pos.x,
-        y: pos.y,
-        size: pos.fontSize,
+        x: placement.x,
+        y: placement.y,
+        size: placement.size,
         font,
         color: rgb(0, 0, 0),
-        maxWidth: pos.maxWidth,
-        lineHeight: pos.fontSize + 1,
+        maxWidth: placement.maxWidth,
+        lineHeight: placement.lineHeight ?? placement.size + 1,
       });
     }
 
