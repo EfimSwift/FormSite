@@ -1,0 +1,38 @@
+# Деплой FormSite на Cloudflare Pages через GitHub Actions.
+# Токен хранится только в Secrets репозитория — не в чате и не в коде.
+#
+# GitHub → FormSite → Settings → Secrets and variables → Actions:
+#   CLOUDFLARE_API_TOKEN  — Account → Cloudflare Pages → Edit
+#   CLOUDFLARE_ACCOUNT_ID — 5e77f940207783011628f0eb0b05f26b
+#
+# Первый раз: создайте проект Pages с именем formsite в dashboard
+# или wrangler создаст его при первом deploy (если токен с правами Edit).
+
+name: Deploy Cloudflare Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      deployments: write
+    name: Deploy to Cloudflare Pages
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Generate PDF templates
+        run: python tools/generate_sample_forms.py
+
+      - name: Deploy
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy . --project-name=formsite
+          gitHubToken: ${{ secrets.GITHUB_TOKEN }}
