@@ -37,18 +37,23 @@ python tools/fetch_dejavu_font.py
 
 ## Cloudflare Pages
 
-### Правильні налаштування (важливо)
+### Помилка `Invalid request body` при очищенні Deploy command
+
+У **Workers Builds** поле deploy **не можна залишити порожнім** — UI повертає Invalid request body.  
+**Не видаляйте** команду — **замініть** її.
 
 | Поле | Значення |
 |------|----------|
-| **Build command** | *(порожньо — нічого не писати)* |
-| **Deploy command** | *(порожньо — **не** `npx wrangler deploy`)* |
-| **Build output directory** | `.` |
-| **Framework preset** | None |
+| **Build command** | *(порожньо)* |
+| **Deploy command** (production) | `npx wrangler pages deploy .` |
+| **Non-production deploy command** | те саме: `npx wrangler pages deploy .` |
+| **Version command** | якщо не дає очистити — залиште як є або те саме `npx wrangler pages deploy .` |
 
-Помилка `Missing entry-point to Worker script` означає, що в Cloudflare увімкнено **`npx wrangler deploy`**. Це команда для **Workers**, не для нашого статичного сайту. Видаліть її в **Settings → Builds** (або **Build configuration**) і зробіть **Retry deployment**.
+**Не використовуйте:** `npx wrangler deploy` (це Worker, не статичний Pages).
 
-Потрібен саме продукт **Pages** (Connect to Git), не Worker з deploy command.
+У репо має бути `wrangler.toml` з `pages_build_output_dir = "."` (вже є).
+
+Якщо форма все одно ламається — створіть **новий** проект **Pages → Connect to Git** (класичний Pages без Workers Builds).
 
 - **Variables:** `BASIC_AUTH_USER`, `BASIC_AUTH_PASS` — захист через `functions/_middleware.js`
 

@@ -1,6 +1,11 @@
 name = "formsite"
 compatibility_date = "2024-09-01"
+
+# Каталог статики для `npx wrangler pages deploy .` (корень репо)
 pages_build_output_dir = "."
 
-# Build command у Cloudflare Pages: (порожньо)
+# Cloudflare Builds → Deploy command (НЕ `wrangler deploy`):
+#   npx wrangler pages deploy .
+#
+# Build command: порожньо
 # Environment: BASIC_AUTH_USER, BASIC_AUTH_PASS
