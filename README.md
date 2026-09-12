@@ -1,6 +1,6 @@
 # FormSite
 
-Статичний сайт **без Node.js**: HTML + ES-модули в браузері, PDF через [pdf-lib](https://pdf-lib.js.org/) (CDN), тестові шаблони — Python (stdlib).
+Статичний сайт **без Node.js**: HTML + ES-модули в браузері, PDF через **pdf-lib** у `vendor/`, тестові шаблони — Python (stdlib).
 
 ## Архітектура
 
@@ -37,8 +37,19 @@ python tools/fetch_dejavu_font.py
 
 ## Cloudflare Pages
 
-- **Build command:** *(порожньо)*
-- **Output directory:** `/` (корінь репозиторію)
+### Правильні налаштування (важливо)
+
+| Поле | Значення |
+|------|----------|
+| **Build command** | *(порожньо — нічого не писати)* |
+| **Deploy command** | *(порожньо — **не** `npx wrangler deploy`)* |
+| **Build output directory** | `.` |
+| **Framework preset** | None |
+
+Помилка `Missing entry-point to Worker script` означає, що в Cloudflare увімкнено **`npx wrangler deploy`**. Це команда для **Workers**, не для нашого статичного сайту. Видаліть її в **Settings → Builds** (або **Build configuration**) і зробіть **Retry deployment**.
+
+Потрібен саме продукт **Pages** (Connect to Git), не Worker з deploy command.
+
 - **Variables:** `BASIC_AUTH_USER`, `BASIC_AUTH_PASS` — захист через `functions/_middleware.js`
 
 Деплой без збірки: у git мають бути `vendor/*`, `forms/templates/*.pdf`, `fonts/DejaVuSans.ttf`.
