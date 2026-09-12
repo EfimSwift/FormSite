@@ -48,6 +48,23 @@ async function fetchTemplate(file) {
   throw new Error(`Не вдалося завантажити шаблон: ${file}`);
 }
 
+/** Имя файла загрузки — латиница; текст в PDF остаётся украинским. */
+function downloadFileName(variantId, fio) {
+  const map = {
+    а: "a", б: "b", в: "v", г: "h", ґ: "g", д: "d", е: "e", є: "ie", ж: "zh",
+    з: "z", и: "y", і: "i", ї: "i", й: "i", к: "k", л: "l", м: "m", н: "n",
+    о: "o", п: "p", р: "r", с: "s", т: "t", у: "u", ф: "f", х: "kh", ц: "ts",
+    ч: "ch", ш: "sh", щ: "shch", ю: "iu", я: "ia", ь: "", "'": "", "’": "",
+  };
+  const raw = (fio ?? "document").trim().toLowerCase();
+  let lat = "";
+  for (const ch of raw) {
+    lat += map[ch] ?? (/[a-z0-9_-]/i.test(ch) ? ch : "_");
+  }
+  lat = lat.replace(/_+/g, "_").replace(/^_|_$/g, "") || "document";
+  return `${variantId}_${lat}.pdf`;
+}
+
 export class PdfLibGenerator {
   async generate(variant, data, proposal) {
     const templateBytes = await fetchTemplate(variant.templateFile);
@@ -76,9 +93,8 @@ export class PdfLibGenerator {
     }
 
     const bytes = await pdf.save();
-    const safeFio = (data.fio ?? "document").replace(/[^\p{L}\p{N}\-_]+/gu, "_");
     return {
-      fileName: `${variant.id}_${safeFio}.pdf`,
+      fileName: downloadFileName(variant.id, data.fio),
       bytes,
     };
   }

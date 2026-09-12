@@ -4,6 +4,7 @@
       "id": "zayava-pererazunok",
       "title": "Заява про перерахунок вислуги",
       "category": "Заяви",
+      "layoutNote": "Тестовий макет; пізніше — PDF/XLS з таблицею",
       "variants": [
         {
           "id": "zayava-v1",
@@ -11,23 +12,79 @@
           "description": "ПІБ і частина у верхній таблиці, дати внизу",
           "templateFile": "zayava-pererazunok-v1.pdf",
           "placements": [
-            { "semantic": "fio", "page": 0, "x": 120, "y": 680, "fontSize": 11, "maxWidth": 400 },
-            { "semantic": "unit_number", "page": 0, "x": 200, "y": 640, "fontSize": 11 },
-            { "semantic": "date_start", "page": 0, "x": 140, "y": 520, "fontSize": 11 },
-            { "semantic": "date_end", "page": 0, "x": 320, "y": 520, "fontSize": 11 }
+            {
+              "semantic": "fio",
+              "page": 0,
+              "x": 136.06,
+              "y": 740.01,
+              "fontSize": 11,
+              "maxWidth": 388.0
+            },
+            {
+              "semantic": "unit_number",
+              "page": 0,
+              "x": 136.06,
+              "y": 705.99,
+              "fontSize": 11
+            },
+            {
+              "semantic": "date_start",
+              "page": 0,
+              "x": 136.06,
+              "y": 598.28,
+              "fontSize": 11
+            },
+            {
+              "semantic": "date_end",
+              "page": 0,
+              "x": 334.49,
+              "y": 598.28,
+              "fontSize": 11
+            }
           ]
         },
         {
           "id": "zayava-v2",
           "label": "Таблиця Б — компактний блок",
-          "description": "Усі поля в одному блоці по центру",
+          "description": "Усі поля в одному блоці",
           "templateFile": "zayava-pererazunok-v2.pdf",
           "placements": [
-            { "semantic": "fio", "page": 0, "x": 100, "y": 600, "fontSize": 11, "maxWidth": 420 },
-            { "semantic": "unit_number", "page": 0, "x": 100, "y": 560, "fontSize": 11 },
-            { "semantic": "birth_date", "page": 0, "x": 100, "y": 520, "fontSize": 11 },
-            { "semantic": "date_start", "page": 0, "x": 100, "y": 480, "fontSize": 11 },
-            { "semantic": "date_end", "page": 0, "x": 280, "y": 480, "fontSize": 11 }
+            {
+              "semantic": "fio",
+              "page": 0,
+              "x": 121.89,
+              "y": 654.97,
+              "fontSize": 11,
+              "maxWidth": 403.0
+            },
+            {
+              "semantic": "unit_number",
+              "page": 0,
+              "x": 121.89,
+              "y": 620.95,
+              "fontSize": 11
+            },
+            {
+              "semantic": "birth_date",
+              "page": 0,
+              "x": 121.89,
+              "y": 586.94,
+              "fontSize": 11
+            },
+            {
+              "semantic": "date_start",
+              "page": 0,
+              "x": 121.89,
+              "y": 552.92,
+              "fontSize": 11
+            },
+            {
+              "semantic": "date_end",
+              "page": 0,
+              "x": 320.31,
+              "y": 552.92,
+              "fontSize": 11
+            }
           ]
         }
       ]
@@ -43,10 +100,35 @@
           "description": "ПІБ зліва, частина справа",
           "templateFile": "dovidka-visluga-v1.pdf",
           "placements": [
-            { "semantic": "fio", "page": 0, "x": 80, "y": 650, "fontSize": 11, "maxWidth": 220 },
-            { "semantic": "unit_number", "page": 0, "x": 320, "y": 650, "fontSize": 11 },
-            { "semantic": "date_start", "page": 0, "x": 80, "y": 580, "fontSize": 11 },
-            { "semantic": "date_end", "page": 0, "x": 280, "y": 580, "fontSize": 11 }
+            {
+              "semantic": "fio",
+              "page": 0,
+              "x": 107.72,
+              "y": 711.66,
+              "fontSize": 11,
+              "maxWidth": 417.0
+            },
+            {
+              "semantic": "unit_number",
+              "page": 0,
+              "x": 362.83,
+              "y": 711.66,
+              "fontSize": 11
+            },
+            {
+              "semantic": "date_start",
+              "page": 0,
+              "x": 107.72,
+              "y": 640.8,
+              "fontSize": 11
+            },
+            {
+              "semantic": "date_end",
+              "page": 0,
+              "x": 306.14,
+              "y": 640.8,
+              "fontSize": 11
+            }
           ]
         }
       ]
@@ -62,9 +144,28 @@
           "description": "Шапка з ПІБ та датою народження",
           "templateFile": "poyasnennya-v1.pdf",
           "placements": [
-            { "semantic": "fio", "page": 0, "x": 110, "y": 700, "fontSize": 11, "maxWidth": 380 },
-            { "semantic": "birth_date", "page": 0, "x": 180, "y": 660, "fontSize": 11 },
-            { "semantic": "unit_number", "page": 0, "x": 180, "y": 620, "fontSize": 11 }
+            {
+              "semantic": "fio",
+              "page": 0,
+              "x": 130.39,
+              "y": 754.18,
+              "fontSize": 11,
+              "maxWidth": 394.0
+            },
+            {
+              "semantic": "birth_date",
+              "page": 0,
+              "x": 130.39,
+              "y": 717.33,
+              "fontSize": 11
+            },
+            {
+              "semantic": "unit_number",
+              "page": 0,
+              "x": 130.39,
+              "y": 680.48,
+              "fontSize": 11
+            }
           ]
         }
       ]
@@ -80,10 +181,35 @@
           "description": "Дати початку та закінчення у таблиці",
           "templateFile": "nakaz-vidpustka-v1.pdf",
           "placements": [
-            { "semantic": "fio", "page": 0, "x": 100, "y": 640, "fontSize": 11, "maxWidth": 400 },
-            { "semantic": "unit_number", "page": 0, "x": 100, "y": 600, "fontSize": 11 },
-            { "semantic": "date_start", "page": 0, "x": 150, "y": 500, "fontSize": 11 },
-            { "semantic": "date_end", "page": 0, "x": 300, "y": 500, "fontSize": 11 }
+            {
+              "semantic": "fio",
+              "page": 0,
+              "x": 121.89,
+              "y": 697.49,
+              "fontSize": 11,
+              "maxWidth": 403.0
+            },
+            {
+              "semantic": "unit_number",
+              "page": 0,
+              "x": 121.89,
+              "y": 660.64,
+              "fontSize": 11
+            },
+            {
+              "semantic": "date_start",
+              "page": 0,
+              "x": 150.24,
+              "y": 569.93,
+              "fontSize": 11
+            },
+            {
+              "semantic": "date_end",
+              "page": 0,
+              "x": 320.31,
+              "y": 569.93,
+              "fontSize": 11
+            }
           ]
         }
       ]
@@ -99,21 +225,65 @@
           "description": "Усі п'ять полів у сітці",
           "templateFile": "reestr-oblik-v1.pdf",
           "placements": [
-            { "semantic": "fio", "page": 0, "x": 90, "y": 690, "fontSize": 10, "maxWidth": 430 },
-            { "semantic": "unit_number", "page": 0, "x": 90, "y": 650, "fontSize": 10 },
-            { "semantic": "birth_date", "page": 0, "x": 90, "y": 610, "fontSize": 10 },
-            { "semantic": "date_start", "page": 0, "x": 90, "y": 570, "fontSize": 10 },
-            { "semantic": "date_end", "page": 0, "x": 280, "y": 570, "fontSize": 10 }
+            {
+              "semantic": "fio",
+              "page": 0,
+              "x": 113.39,
+              "y": 762.69,
+              "fontSize": 10,
+              "maxWidth": 411.0
+            },
+            {
+              "semantic": "unit_number",
+              "page": 0,
+              "x": 113.39,
+              "y": 728.67,
+              "fontSize": 10
+            },
+            {
+              "semantic": "birth_date",
+              "page": 0,
+              "x": 113.39,
+              "y": 694.65,
+              "fontSize": 10
+            },
+            {
+              "semantic": "date_start",
+              "page": 0,
+              "x": 113.39,
+              "y": 660.64,
+              "fontSize": 10
+            },
+            {
+              "semantic": "date_end",
+              "page": 0,
+              "x": 291.97,
+              "y": 660.64,
+              "fontSize": 10
+            }
           ]
         },
         {
           "id": "reestr-v2",
           "label": "Мінімальний набір",
-          "description": "Лише ПІБ та частина (для перевірки оцінки ІІ)",
+          "description": "Лише ПІБ та частина",
           "templateFile": "reestr-oblik-v2.pdf",
           "placements": [
-            { "semantic": "fio", "page": 0, "x": 100, "y": 620, "fontSize": 12, "maxWidth": 400 },
-            { "semantic": "unit_number", "page": 0, "x": 100, "y": 580, "fontSize": 12 }
+            {
+              "semantic": "fio",
+              "page": 0,
+              "x": 121.89,
+              "y": 683.31,
+              "fontSize": 11,
+              "maxWidth": 403.0
+            },
+            {
+              "semantic": "unit_number",
+              "page": 0,
+              "x": 121.89,
+              "y": 649.3,
+              "fontSize": 11
+            }
           ]
         }
       ]

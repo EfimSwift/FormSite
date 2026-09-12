@@ -9,8 +9,9 @@
 | UI | `js/main.js`, `css/main.css` |
 | Сценарії | `js/application/` |
 | Доменні порти | задокументовані в README; реалізації в `js/infrastructure/` |
-| Каталог форм | `forms/catalog.json` |
-| Шаблони PDF | `forms/templates/*.pdf` |
+| Каталог документів | `forms/documents.json` (поля → комірки Excel) |
+| Шаблон Excel | `forms/templates/interactive-board.xlsx` |
+| Каталог PDF (тест) | `forms/catalog.json` |
 
 Заміна «ІІ» або PDF-движка — один файл у `js/infrastructure/`, без зміни UI.
 

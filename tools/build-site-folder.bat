@@ -5,7 +5,7 @@ python tools\generate_sample_forms.py
 set "DEST=%CD%\сайт"
 if exist "%DEST%" rmdir /s /q "%DEST%"
 mkdir "%DEST%"
-for %%D in (index.html css js forms vendor fonts _redirects) do (
+for %%D in (index.html css js forms vendor fonts) do (
   if exist "%%D" xcopy "%%D" "%DEST%\%%D\" /E /I /Y >nul
 )
 if not exist "%DEST%\fonts" mkdir "%DEST%\fonts"

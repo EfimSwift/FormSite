@@ -1,0 +1,81 @@
+{
+  "templateFile": "interactive-board.xlsx",
+  "documents": [
+    {
+      "id": "trellix-activation",
+      "title": "Заявка на активацію Trellix Mobile Security",
+      "description": "Відомості про відповідальну особу (рядки шаблону Excel)",
+      "fields": [
+        {
+          "id": "fio",
+          "label": "Прізвище, ім'я та по батькові",
+          "cell": "B10",
+          "type": "text"
+        },
+        {
+          "id": "contact_phone",
+          "label": "Контактний номер телефону",
+          "cell": "C10",
+          "type": "text"
+        },
+        {
+          "id": "signal_phone",
+          "label": "Мобільний номер (Signal)",
+          "cell": "D10",
+          "type": "text"
+        },
+        {
+          "id": "duty_unit",
+          "label": "Черговий підрозділ (в/ч)",
+          "cell": "E10",
+          "type": "text"
+        },
+        {
+          "id": "duty_node",
+          "label": "Черговий вузол зв'язку",
+          "cell": "F10",
+          "type": "text"
+        }
+      ],
+      "pdfRange": "A4:F10"
+    },
+    {
+      "id": "device-end-user",
+      "title": "Відомості про кінцевого користувача (власника пристрою)",
+      "description": "Дані власника пристрою з інтерактивної дошки",
+      "fields": [
+        {
+          "id": "fio",
+          "label": "Прізвище, ім'я та по батькові",
+          "cell": "B14",
+          "type": "text"
+        },
+        {
+          "id": "email",
+          "label": "Адреса електронної пошти",
+          "cell": "C14",
+          "type": "email"
+        },
+        {
+          "id": "device_model",
+          "label": "Модель пристрою",
+          "cell": "D14",
+          "type": "text"
+        },
+        {
+          "id": "serial",
+          "label": "Серійний номер",
+          "cell": "E14",
+          "type": "text"
+        },
+        {
+          "id": "spz_name",
+          "label": "СПЗ, що використовується",
+          "cell": "F14",
+          "type": "text"
+        }
+      ],
+      "pdfRange": "A4:F14"
+    }
+  ]
+}
