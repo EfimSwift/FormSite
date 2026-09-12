@@ -27,36 +27,49 @@ def make_blank_data_xlsx() -> None:
 
 
 def fix_signature_block_in_workbook(xlsx: Path) -> None:
-    """Лівий текст A17:E18 (перенос як у шаблоні), звання F17:F18 зверху праворуч."""
+    """A17 — текст зліва; F17 — ПІБ зверху справа; A18 — «полковник» другим рядком зліва."""
     ps = rf"""
 $xl = New-Object -ComObject Excel.Application
 $xl.Visible = $false
 $xl.DisplayAlerts = $false
 $wb = $xl.Workbooks.Open('{xlsx.resolve()}')
 $ws = $wb.Worksheets.Item(1)
-$left = $ws.Range('A17').Value2
-if ($null -eq $left -or "$left".Length -eq 0) {{ $left = $ws.Range('A17').Text }}
-$rightRaw = [string]$ws.Range('A18').Value2
-$right = $rightRaw.Trim()
-if ($right.Length -eq 0) {{ $right = 'полковник' }}
 
-try {{ $ws.Range('A18:F18').UnMerge() }} catch {{ }}
-foreach ($addr in @('B17','C17','D17','E17','F17','B18','C18','D18','E18','F18')) {{
-  $ws.Range($addr).UnMerge() | Out-Null
-  $ws.Range($addr).Clear()
+foreach ($rng in @('A17:E18','F17:F18','A18:F18')) {{
+  try {{ $ws.Range($rng).UnMerge() }} catch {{ }}
 }}
 
-$ws.Range('A17:E18').Merge() | Out-Null
-$ws.Range('A17').Value2 = $left
-$ws.Range('A17:E18').WrapText = $true
-$ws.Range('A17:E18').VerticalAlignment = -4160
-$ws.Range('A17:E18').HorizontalAlignment = -4131
+$left = $ws.Range('A17').Value2
+if ($null -eq $left -or "$left".Length -eq 0) {{ $left = $ws.Range('A17').Text }}
 
-$ws.Range('F17:F18').Merge() | Out-Null
-$ws.Range('F17').Value2 = $right
-$ws.Range('F17:F18').WrapText = $false
-$ws.Range('F17:F18').VerticalAlignment = -4160
-$ws.Range('F17:F18').HorizontalAlignment = -4152
+$row18 = [string]$ws.Range('A18').Value2
+$f17 = [string]$ws.Range('F17').Value2
+$rank = 'полковник'
+$name = ''
+if ($row18 -match 'полковник\s{{2,}}(.+)') {{
+  $name = $matches[1].Trim()
+}} elseif ($f17 -and ($f17.Trim() -ne 'полковник')) {{
+  $name = $f17.Trim()
+}}
+
+$ws.Range('A17').Value2 = $left
+$ws.Range('A17').WrapText = $true
+$ws.Range('A17').VerticalAlignment = -4160
+$ws.Range('A17').HorizontalAlignment = -4131
+
+$ws.Range('F17').Value2 = $name
+$ws.Range('F17').WrapText = $false
+$ws.Range('F17').VerticalAlignment = -4160
+$ws.Range('F17').HorizontalAlignment = -4152
+
+$ws.Range('A18').Value2 = $rank
+$ws.Range('A18').WrapText = $false
+$ws.Range('A18').VerticalAlignment = -4160
+$ws.Range('A18').HorizontalAlignment = -4131
+
+foreach ($addr in @('B17','C17','D17','E17','B18','C18','D18','E18','F18')) {{
+  $ws.Range($addr).Clear()
+}}
 
 $ws.Rows('17:18').EntireRow.AutoFit() | Out-Null
 $wb.Save()
