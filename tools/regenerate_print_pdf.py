@@ -52,10 +52,12 @@ if ($row18 -match 'полковник\s{{2,}}(.+)') {{
   $name = $f17.Trim()
 }}
 
+try {{ $ws.Range('A17:E17').UnMerge() }} catch {{ }}
+$ws.Range('A17:E17').Merge() | Out-Null
 $ws.Range('A17').Value2 = $left
-$ws.Range('A17').WrapText = $true
-$ws.Range('A17').VerticalAlignment = -4160
-$ws.Range('A17').HorizontalAlignment = -4131
+$ws.Range('A17:E17').WrapText = $false
+$ws.Range('A17:E17').VerticalAlignment = -4160
+$ws.Range('A17:E17').HorizontalAlignment = -4131
 
 $ws.Range('F17').Value2 = $name
 $ws.Range('F17').WrapText = $false
@@ -67,7 +69,7 @@ $ws.Range('A18').WrapText = $false
 $ws.Range('A18').VerticalAlignment = -4160
 $ws.Range('A18').HorizontalAlignment = -4131
 
-foreach ($addr in @('B17','C17','D17','E17','B18','C18','D18','E18','F18')) {{
+foreach ($addr in @('B18','C18','D18','E18','F18')) {{
   $ws.Range($addr).Clear()
 }}
 
