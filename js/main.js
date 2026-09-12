@@ -164,7 +164,7 @@ function renderApp() {
     });
 
     dataCard.append(
-      el("p", { className: "hint" }, "PDF — друкована таблиця як у бланку. Excel — той самий шаблон із вашими комірками (100% як у файлі на дошці)."),
+      el("p", { className: "hint" }, "Excel — той самий шаблон із рамками. PDF — друкований бланк Excel + ваш текст у комірках."),
       el("div", { className: "actions" }, genPdfBtn, genXlsxBtn),
     );
     layout.append(dataCard);

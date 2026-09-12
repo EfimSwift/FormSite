@@ -1,12 +1,31 @@
-import XLSX from "../../../vendor/xlsx.mjs";
 import { PDFDocument, rgb } from "../../../vendor/pdf-lib.esm.min.js";
 import fontkit from "../../../vendor/fontkit.es.js";
 
 let cachedFontBytes = null;
-let cachedTemplate = null;
+let cachedPdfTemplate = null;
 
-const DEFAULT_COL_WCH = 8.43;
-const DEFAULT_ROW_HPT = 16;
+/** Координаты ячеек в пунктах Excel (как Range.Left/Top/Width/Height). */
+const CELL_RECTS = {
+  B10: { left: 48, top: 152.4, w: 102, h: 24 },
+  C10: { left: 150, top: 152.4, w: 124.2, h: 24 },
+  D10: { left: 274.2, top: 152.4, w: 109.8, h: 24 },
+  E10: { left: 384, top: 152.4, w: 85.8, h: 24 },
+  F10: { left: 469.8, top: 152.4, w: 75.6, h: 24 },
+  B14: { left: 48, top: 238.2, w: 102, h: 55.8 },
+  C14: { left: 150, top: 238.2, w: 124.2, h: 55.8 },
+  D14: { left: 274.2, top: 238.2, w: 109.8, h: 55.8 },
+  E14: { left: 384, top: 238.2, w: 85.8, h: 55.8 },
+  F14: { left: 469.8, top: 238.2, w: 75.6, h: 55.8 },
+};
+
+/** Параметры печати листа A1:F18 → PDF (ExportAsFixedFormat, Excel). */
+const PRINT_MAP = {
+  pageWidth: 595.2,
+  pageHeight: 841.68,
+  sheetWidth: 545.4,
+  sheetHeight: 349.2,
+  margin: 36,
+};
 
 function isFontBinary(bytes) {
   if (!bytes?.byteLength) return false;
@@ -36,22 +55,41 @@ async function loadBodyFont(pdf) {
   return pdf.embedFont(new Uint8Array(cachedFontBytes), { subset: false });
 }
 
-async function loadTemplate(templateFile) {
-  if (cachedTemplate?.name === templateFile) return cachedTemplate.bytes;
-  const res = await fetch(`/forms/templates/${templateFile}`);
-  if (!res.ok) throw new Error(`Шаблон Excel не знайдено: ${templateFile}`);
+async function loadPdfTemplate(file) {
+  if (cachedPdfTemplate?.name === file) return cachedPdfTemplate.bytes;
+  const res = await fetch(`/forms/templates/${file}`);
+  if (!res.ok) {
+    throw new Error(
+      "PDF-шаблон не знайдено. У репозиторії має бути forms/templates/interactive-board-print.pdf",
+    );
+  }
   const bytes = new Uint8Array(await res.arrayBuffer());
-  cachedTemplate = { name: templateFile, bytes };
+  cachedPdfTemplate = { name: file, bytes };
   return bytes;
 }
 
-function setCell(ws, addr, value) {
-  const v = String(value ?? "");
-  if (!v) {
-    delete ws[addr];
-    return;
-  }
-  ws[addr] = { t: "s", v };
+function printScale() {
+  const { pageWidth, pageHeight, sheetWidth, sheetHeight, margin } = PRINT_MAP;
+  const innerW = pageWidth - margin * 2;
+  const innerH = pageHeight - margin * 2;
+  return Math.min(innerW / sheetWidth, innerH / sheetHeight);
+}
+
+function cellToPdf(rect) {
+  const scale = printScale();
+  const { pageHeight, margin } = PRINT_MAP;
+  const sheetW = PRINT_MAP.sheetWidth * scale;
+  const sheetH = PRINT_MAP.sheetHeight * scale;
+  const offsetX = (PRINT_MAP.pageWidth - sheetW) / 2;
+  const offsetY = (PRINT_MAP.pageHeight - sheetH) / 2;
+
+  const x = offsetX + rect.left * scale + 2;
+  const boxTop = offsetY + rect.top * scale;
+  const boxH = rect.h * scale;
+  const maxWidth = rect.w * scale - 4;
+  const y = pageHeight - (boxTop + boxH * 0.72);
+  const fontSize = boxH > 30 ? 9 : 8;
+  return { x, y, maxWidth, fontSize };
 }
 
 function downloadFileName(docId, fio) {
@@ -70,210 +108,39 @@ function downloadFileName(docId, fio) {
   return `${docId}_${lat}.pdf`;
 }
 
-/** Ширина колонки в «символах Excel» (wch). */
-function colWch(ws, colIndex) {
-  const col = ws["!cols"]?.[colIndex];
-  if (col?.wch) return col.wch;
-  if (col?.width) return col.width;
-  return DEFAULT_COL_WCH;
-}
-
-function rowHpt(ws, rowIndex) {
-  const row = ws["!rows"]?.[rowIndex];
-  if (row?.hpt) return row.hpt;
-  if (row?.hpx) return row.hpx * 0.75;
-  return DEFAULT_ROW_HPT;
-}
-
-function buildMergeMaps(merges) {
-  const skip = new Set();
-  const spanAt = new Map();
-
-  for (const m of merges) {
-    const master = XLSX.utils.encode_cell(m.s);
-    spanAt.set(master, m);
-    for (let r = m.s.r; r <= m.e.r; r++) {
-      for (let c = m.s.c; c <= m.e.c; c++) {
-        if (r === m.s.r && c === m.s.c) continue;
-        skip.add(XLSX.utils.encode_cell({ r, c }));
-      }
-    }
-  }
-  return { skip, spanAt };
-}
-
-function regionSize(ws, m, colScale, rowHeights) {
-  let w = 0;
-  for (let c = m.s.c; c <= m.e.c; c++) {
-    w += colWch(ws, c) * colScale;
-  }
-  let h = 0;
-  for (let r = m.s.r; r <= m.e.r; r++) {
-    h += rowHeights.get(r) ?? DEFAULT_ROW_HPT;
-  }
-  return { w, h };
-}
-
-function wrapLines(text, font, size, maxWidth) {
-  const normalized = String(text).replace(/\s+/g, " ").trim();
-  if (!normalized) return [];
-  const words = normalized.split(" ");
-  const lines = [];
-  let line = "";
-  for (const word of words) {
-    const candidate = line ? `${line} ${word}` : word;
-    const width = font.widthOfTextAtSize(candidate, size);
-    if (width <= maxWidth || !line) {
-      line = candidate;
-    } else {
-      lines.push(line);
-      line = word;
-    }
-  }
-  if (line) lines.push(line);
-  return lines;
-}
-
-function drawCellText(page, font, text, x, y, w, h) {
-  const pad = 3;
-  const maxWidth = Math.max(8, w - pad * 2);
-  let size = 9;
-  if (w < 55) size = 7;
-  if (w > 120 && text.length > 60) size = 8;
-
-  let lines = wrapLines(text, font, size, maxWidth);
-  const lineH = size + 2;
-  while (lines.length * lineH > h - pad * 2 && size > 6) {
-    size -= 1;
-    lines = wrapLines(text, font, size, maxWidth);
-  }
-
-  let baseline = y + h - pad - size;
-  for (const ln of lines) {
-    if (baseline < y + pad) break;
-    page.drawText(ln, {
-      x: x + pad,
-      y: baseline,
-      size,
-      font,
-      color: rgb(0, 0, 0),
-    });
-    baseline -= lineH;
-  }
-}
-
-/** Прибираємо демо-дані з іншого блоку форми. */
-function clearOtherSections(ws, documentDef) {
-  const clearRanges = documentDef.clearCells ?? [];
-  for (const addr of clearRanges) {
-    delete ws[addr];
-  }
-}
-
 export class XlsxPdfGenerator {
-  async generate(documentDef, values, templateFile) {
-    const templateBytes = await loadTemplate(templateFile);
-    const wb = XLSX.read(templateBytes, { type: "array" });
-    const sheetName = wb.SheetNames[0];
-    const ws = wb.Sheets[sheetName];
-
-    for (const field of documentDef.fields) {
-      setCell(ws, field.cell, values[field.id] ?? "");
-    }
-    clearOtherSections(ws, documentDef);
-
-    const rangeStr = documentDef.pdfRange || ws["!ref"] || "A1:F18";
-    const range = XLSX.utils.decode_range(rangeStr);
-    const merges = (ws["!merges"] || []).filter((m) => {
-      return (
-        m.e.r >= range.s.r &&
-        m.s.r <= range.e.r &&
-        m.e.c >= range.s.c &&
-        m.s.c <= range.e.c
-      );
-    });
-    const { skip, spanAt } = buildMergeMaps(merges);
-
-    let totalWch = 0;
-    for (let c = range.s.c; c <= range.e.c; c++) {
-      totalWch += colWch(ws, c);
-    }
-
-    const pageW = 841.89;
-    const pageH = 595.28;
-    const margin = 32;
-    const tableW = pageW - margin * 2;
-    const colScale = tableW / totalWch;
-
-    const rowHeights = new Map();
-    let totalH = 0;
-    for (let r = range.s.r; r <= range.e.r; r++) {
-      const h = rowHpt(ws, r);
-      rowHeights.set(r, h);
-      totalH += h;
-    }
-
+  async generate(documentDef, values, _templateFile) {
+    const pdfTemplateFile =
+      documentDef.pdfTemplateFile ?? "interactive-board-print.pdf";
+    const templateBytes = await loadPdfTemplate(pdfTemplateFile);
+    const src = await PDFDocument.load(templateBytes);
     const pdf = await PDFDocument.create();
     const font = await loadBodyFont(pdf);
-    const page = pdf.addPage([pageW, pageH]);
 
-    let tableTop = margin + (pageH - margin * 2 - totalH) / 2 + totalH;
-    if (tableTop > pageH - margin) tableTop = pageH - margin;
+    const [embedded] = await pdf.copyPages(src, [0]);
+    const page = pdf.addPage([embedded.getWidth(), embedded.getHeight()]);
+    page.drawPage(embedded);
 
-    const colX = new Map();
-    let x = margin;
-    for (let c = range.s.c; c <= range.e.c; c++) {
-      colX.set(c, x);
-      x += colWch(ws, c) * colScale;
-    }
-
-    const rowY = new Map();
-    let y = tableTop;
-    for (let r = range.s.r; r <= range.e.r; r++) {
-      const h = rowHeights.get(r);
-      y -= h;
-      rowY.set(r, y);
-    }
-
-    const border = rgb(0.35, 0.35, 0.38);
-    const fillHeader = rgb(0.96, 0.96, 0.97);
-
-    const headerRows = new Set([8, 9, 13]);
-
-    for (let r = range.s.r; r <= range.e.r; r++) {
-      for (let c = range.s.c; c <= range.e.c; c++) {
-        const addr = XLSX.utils.encode_cell({ r, c });
-        if (skip.has(addr)) continue;
-
-        const m = spanAt.get(addr) ?? {
-          s: { r, c },
-          e: { r, c },
-        };
-        const { w, h } = regionSize(ws, m, colScale, rowHeights);
-        const x0 = colX.get(m.s.c);
-        const y0 = rowY.get(m.s.r);
-
-        page.drawRectangle({
-          x: x0,
-          y: y0,
-          width: w,
-          height: h,
-          borderColor: border,
-          borderWidth: 0.6,
-          color: headerRows.has(r) ? fillHeader : undefined,
-        });
-
-        const cell = ws[addr];
-        const raw = cell?.v;
-        if (raw === undefined || raw === null || raw === "") continue;
-        drawCellText(page, font, String(raw), x0, y0, w, h);
-      }
+    for (const field of documentDef.fields) {
+      const text = String(values[field.id] ?? "").trim();
+      if (!text) continue;
+      const rect = CELL_RECTS[field.cell];
+      if (!rect) continue;
+      const pos = cellToPdf(rect);
+      page.drawText(text, {
+        x: pos.x,
+        y: pos.y,
+        size: pos.fontSize,
+        font,
+        color: rgb(0, 0, 0),
+        maxWidth: pos.maxWidth,
+        lineHeight: pos.fontSize + 1,
+      });
     }
 
     const bytes = await pdf.save();
-    const fio = values.fio ?? values.email ?? "";
     return {
-      fileName: downloadFileName(documentDef.id, fio),
+      fileName: downloadFileName(documentDef.id, values.fio ?? values.email),
       bytes,
     };
   }

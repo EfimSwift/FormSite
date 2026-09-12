@@ -1,4 +1,8 @@
-import XLSX from "../../../vendor/xlsx.mjs";
+import { unzipBytes, zipBytes } from "./minZip.js";
+import {
+  applyUpdatesToSheetXml,
+  buildUpdates,
+} from "./xlsxSheetPatch.js";
 
 let cachedTemplate = null;
 
@@ -9,21 +13,6 @@ async function loadTemplate(templateFile) {
   const bytes = new Uint8Array(await res.arrayBuffer());
   cachedTemplate = { name: templateFile, bytes };
   return bytes;
-}
-
-function setCell(ws, addr, value) {
-  const v = String(value ?? "");
-  if (!v) {
-    delete ws[addr];
-    return;
-  }
-  ws[addr] = { t: "s", v };
-}
-
-function clearOtherSections(ws, documentDef) {
-  for (const addr of documentDef.clearCells ?? []) {
-    delete ws[addr];
-  }
 }
 
 function downloadFileName(docId, fio) {
@@ -45,20 +34,21 @@ function downloadFileName(docId, fio) {
 export class XlsxFillExporter {
   async generate(documentDef, values, templateFile) {
     const templateBytes = await loadTemplate(templateFile);
-    const wb = XLSX.read(templateBytes, { type: "array" });
-    const sheetName = wb.SheetNames[0];
-    const ws = wb.Sheets[sheetName];
+    const files = unzipBytes(templateBytes);
+    const sheetPath = "xl/worksheets/sheet1.xml";
+    if (!files[sheetPath]) throw new Error("Некоректний шаблон xlsx");
 
-    for (const field of documentDef.fields) {
-      setCell(ws, field.cell, values[field.id] ?? "");
-    }
-    clearOtherSections(ws, documentDef);
+    const sheetXml = new TextDecoder("utf-8").decode(files[sheetPath]);
+    const updates = buildUpdates(documentDef, values);
+    files[sheetPath] = new TextEncoder().encode(
+      applyUpdatesToSheetXml(sheetXml, updates),
+    );
 
-    const bytes = XLSX.write(wb, { bookType: "xlsx", type: "array" });
+    const bytes = zipBytes(files);
     const fio = values.fio ?? values.email ?? "";
     return {
       fileName: downloadFileName(documentDef.id, fio),
-      bytes: new Uint8Array(bytes),
+      bytes,
     };
   }
 }

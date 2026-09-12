@@ -1,5 +1,6 @@
 {
   "templateFile": "interactive-board.xlsx",
+  "pdfTemplateFile": "interactive-board-print.pdf",
   "documents": [
     {
       "id": "trellix-activation",
@@ -37,7 +38,6 @@
           "type": "text"
         }
       ],
-      "pdfRange": "A4:F10",
       "clearCells": ["A14", "B14", "C14", "D14", "E14", "F14"]
     },
     {
@@ -76,7 +76,6 @@
           "type": "text"
         }
       ],
-      "pdfRange": "A12:F18",
       "clearCells": ["A10", "B10", "C10", "D10", "E10", "F10"]
     }
   ]
