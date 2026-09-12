@@ -108,14 +108,34 @@ function renderApp() {
     dataCard.append(el("h2", {}, "2. Заповніть поля"));
     const grid = el("div", { className: "grid two" });
     for (const field of selectedDoc.fields) {
-      const input = el("input", {
-        type: field.type === "email" ? "email" : field.type === "date" ? "date" : "text",
-        value: fieldValues[field.id] ?? "",
-        id: `f-${field.id}`,
-      });
-      input.addEventListener("input", () => {
-        fieldValues[field.id] = input.value;
-      });
+      const input =
+        field.type === "textarea"
+          ? (() => {
+              const ta = el("textarea", {
+                rows: "3",
+                id: `f-${field.id}`,
+              });
+              ta.value = fieldValues[field.id] ?? "";
+              ta.addEventListener("input", () => {
+                fieldValues[field.id] = ta.value;
+              });
+              return ta;
+            })()
+          : el("input", {
+              type:
+                field.type === "email"
+                  ? "email"
+                  : field.type === "date"
+                    ? "date"
+                    : "text",
+              value: fieldValues[field.id] ?? "",
+              id: `f-${field.id}`,
+            });
+      if (field.type !== "textarea") {
+        input.addEventListener("input", () => {
+          fieldValues[field.id] = input.value;
+        });
+      }
       grid.append(el("label", { className: "field" }, field.label, input));
     }
     dataCard.append(grid);

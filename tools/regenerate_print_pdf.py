@@ -149,8 +149,13 @@ def write_js(cells: dict[str, dict[str, float]]) -> None:
     for key in sorted(cells.keys()):
         c = cells[key]
         lines.append(
-            f'  {key}: {{ x: {c["x"]}, y: {c["y"]}, w: {c["w"]}, h: {c["h"]} }},',
+            f'  {key}: {{ page: 0, x: {c["x"]}, y: {c["y"]}, w: {c["w"]}, h: {c["h"]} }},',
         )
+    lines.append("};")
+    lines.append("")
+    lines.append("export const INTERACTIVE_BOARD_PDF_FOOTER_PAIR = {")
+    lines.append('  left: { page: 0, x: 51.4, y: 455.0, w: 330.0, h: 38.0 },')
+    lines.append('  right: { page: 0, x: 395.4, y: 455.0, w: 90.0, h: 38.0 },')
     lines.append("};")
     lines.append("")
     OUT_JS.write_text("\n".join(lines), encoding="utf-8")

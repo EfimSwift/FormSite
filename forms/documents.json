@@ -36,9 +36,25 @@
           "label": "Черговий вузол зв'язку",
           "cell": "F10",
           "type": "text"
+        },
+        {
+          "id": "footer_left",
+          "label": "Підпис (ліворуч, під таблицею)",
+          "cell": "A17",
+          "type": "textarea"
+        },
+        {
+          "id": "footer_right",
+          "label": "Звання / підпис (праворуч)",
+          "cell": "F18",
+          "type": "text"
         }
       ],
-      "clearCells": ["A14", "B14", "C14", "D14", "E14", "F14"]
+      "clearCells": ["A14", "B14", "C14", "D14", "E14", "F14"],
+      "pdfFooterPair": {
+        "leftField": "footer_left",
+        "rightField": "footer_right"
+      }
     },
     {
       "id": "device-end-user",
@@ -74,9 +90,25 @@
           "label": "СПЗ, що використовується",
           "cell": "F14",
           "type": "text"
+        },
+        {
+          "id": "footer_left",
+          "label": "Підпис (ліворуч, під таблицею)",
+          "cell": "A17",
+          "type": "textarea"
+        },
+        {
+          "id": "footer_right",
+          "label": "Звання / підпис (праворуч)",
+          "cell": "F18",
+          "type": "text"
         }
       ],
-      "clearCells": ["A10", "B10", "C10", "D10", "E10", "F10"]
+      "clearCells": ["A10", "B10", "C10", "D10", "E10", "F10"],
+      "pdfFooterPair": {
+        "leftField": "footer_left",
+        "rightField": "footer_right"
+      }
     }
   ]
 }
