@@ -1,0 +1,18 @@
+FormSite — папка для Cloudflare Pages (перетаскивание в Dashboard).
+
+Путь: C:\Users\User\Documents\GitHub\FormSite\сайт
+
+Перетащите СОДЕРЖИМОЕ «сайт» в Upload assets.
+В корне загрузки должен быть index.html.
+
+ВАЖНО: папки functions здесь НЕТ — при drag-and-drop Cloudflare пишет
+«Pages functions are not supported». Basic Auth через middleware не работает
+на таком деплое; остаётся вход demo/demo в js/config.js.
+
+Нужен Basic Auth на всём сайте — деплой через Git или:
+  npx wrangler pages deploy . --project-name=ИМЯ
+(из корня проекта, с папкой functions).
+
+Шрифт PDF перед загрузкой:
+  copy %WINDIR%\Fonts\arial.ttf сайт\fonts\Arial.ttf
+Или запустите tools\build-site-folder.bat

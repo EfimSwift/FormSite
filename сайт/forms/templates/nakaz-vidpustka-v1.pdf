@@ -1,0 +1,41 @@
+%PDF-1.4
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [3 0 R] /Count 1 >>
+endobj
+3 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595.28 841.89] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>
+endobj
+4 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+5 0 obj
+<< /Length 416 >>
+stream
+BT /F1 14 Tf 72 800 Td (Proekt nakazu ? vidpustka) Tj ET
+BT /F1 10 Tf 72 780 Td (FormSite testovyi shablon) Tj ET
+BT /F1 10 Tf 70.87 705.83 Td (PIB:) Tj ET
+121.89 694.49 m 524.41 694.49 l S
+BT /F1 10 Tf 70.87 668.98 Td (V/ch:) Tj ET
+121.89 657.64 m 524.41 657.64 l S
+BT /F1 10 Tf 99.21 578.27 Td (Z:) Tj ET
+150.24 566.93 m 524.41 566.93 l S
+BT /F1 10 Tf 269.29 578.27 Td (Po:) Tj ET
+320.31 566.93 m 524.41 566.93 l S
+endstream
+endobj
+xref
+0 6
+0000000000 65535 f 
+0000000009 00000 n 
+0000000058 00000 n 
+0000000115 00000 n 
+0000000247 00000 n 
+0000000317 00000 n 
+trailer
+<< /Size 6 /Root 1 0 R >>
+startxref
+784
+%%EOF

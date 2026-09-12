@@ -1,0 +1,122 @@
+{
+  "forms": [
+    {
+      "id": "zayava-pererazunok",
+      "title": "Заява про перерахунок вислуги",
+      "category": "Заяви",
+      "variants": [
+        {
+          "id": "zayava-v1",
+          "label": "Таблиця А — класичний макет",
+          "description": "ПІБ і частина у верхній таблиці, дати внизу",
+          "templateFile": "zayava-pererazunok-v1.pdf",
+          "placements": [
+            { "semantic": "fio", "page": 0, "x": 120, "y": 680, "fontSize": 11, "maxWidth": 400 },
+            { "semantic": "unit_number", "page": 0, "x": 200, "y": 640, "fontSize": 11 },
+            { "semantic": "date_start", "page": 0, "x": 140, "y": 520, "fontSize": 11 },
+            { "semantic": "date_end", "page": 0, "x": 320, "y": 520, "fontSize": 11 }
+          ]
+        },
+        {
+          "id": "zayava-v2",
+          "label": "Таблиця Б — компактний блок",
+          "description": "Усі поля в одному блоці по центру",
+          "templateFile": "zayava-pererazunok-v2.pdf",
+          "placements": [
+            { "semantic": "fio", "page": 0, "x": 100, "y": 600, "fontSize": 11, "maxWidth": 420 },
+            { "semantic": "unit_number", "page": 0, "x": 100, "y": 560, "fontSize": 11 },
+            { "semantic": "birth_date", "page": 0, "x": 100, "y": 520, "fontSize": 11 },
+            { "semantic": "date_start", "page": 0, "x": 100, "y": 480, "fontSize": 11 },
+            { "semantic": "date_end", "page": 0, "x": 280, "y": 480, "fontSize": 11 }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "dovidka-visluga",
+      "title": "Довідка про вислугу",
+      "category": "Довідки",
+      "variants": [
+        {
+          "id": "dovidka-v1",
+          "label": "Макет 1 — двоколонкова таблиця",
+          "description": "ПІБ зліва, частина справа",
+          "templateFile": "dovidka-visluga-v1.pdf",
+          "placements": [
+            { "semantic": "fio", "page": 0, "x": 80, "y": 650, "fontSize": 11, "maxWidth": 220 },
+            { "semantic": "unit_number", "page": 0, "x": 320, "y": 650, "fontSize": 11 },
+            { "semantic": "date_start", "page": 0, "x": 80, "y": 580, "fontSize": 11 },
+            { "semantic": "date_end", "page": 0, "x": 280, "y": 580, "fontSize": 11 }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "poyasnennya",
+      "title": "Пояснювальна записка",
+      "category": "Службові",
+      "variants": [
+        {
+          "id": "poyas-v1",
+          "label": "Стандартна шапка",
+          "description": "Шапка з ПІБ та датою народження",
+          "templateFile": "poyasnennya-v1.pdf",
+          "placements": [
+            { "semantic": "fio", "page": 0, "x": 110, "y": 700, "fontSize": 11, "maxWidth": 380 },
+            { "semantic": "birth_date", "page": 0, "x": 180, "y": 660, "fontSize": 11 },
+            { "semantic": "unit_number", "page": 0, "x": 180, "y": 620, "fontSize": 11 }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "nakaz-vidpustka",
+      "title": "Проект наказу (відпустка)",
+      "category": "Накази",
+      "variants": [
+        {
+          "id": "nakaz-v1",
+          "label": "Таблиця періоду відпустки",
+          "description": "Дати початку та закінчення у таблиці",
+          "templateFile": "nakaz-vidpustka-v1.pdf",
+          "placements": [
+            { "semantic": "fio", "page": 0, "x": 100, "y": 640, "fontSize": 11, "maxWidth": 400 },
+            { "semantic": "unit_number", "page": 0, "x": 100, "y": 600, "fontSize": 11 },
+            { "semantic": "date_start", "page": 0, "x": 150, "y": 500, "fontSize": 11 },
+            { "semantic": "date_end", "page": 0, "x": 300, "y": 500, "fontSize": 11 }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "reestr-oblik",
+      "title": "Лист обліку (тестовий бланк)",
+      "category": "Облік",
+      "variants": [
+        {
+          "id": "reestr-v1",
+          "label": "Сітка полів",
+          "description": "Усі п'ять полів у сітці",
+          "templateFile": "reestr-oblik-v1.pdf",
+          "placements": [
+            { "semantic": "fio", "page": 0, "x": 90, "y": 690, "fontSize": 10, "maxWidth": 430 },
+            { "semantic": "unit_number", "page": 0, "x": 90, "y": 650, "fontSize": 10 },
+            { "semantic": "birth_date", "page": 0, "x": 90, "y": 610, "fontSize": 10 },
+            { "semantic": "date_start", "page": 0, "x": 90, "y": 570, "fontSize": 10 },
+            { "semantic": "date_end", "page": 0, "x": 280, "y": 570, "fontSize": 10 }
+          ]
+        },
+        {
+          "id": "reestr-v2",
+          "label": "Мінімальний набір",
+          "description": "Лише ПІБ та частина (для перевірки оцінки ІІ)",
+          "templateFile": "reestr-oblik-v2.pdf",
+          "placements": [
+            { "semantic": "fio", "page": 0, "x": 100, "y": 620, "fontSize": 12, "maxWidth": 400 },
+            { "semantic": "unit_number", "page": 0, "x": 100, "y": 580, "fontSize": 12 }
+          ]
+        }
+      ]
+    }
+  ]
+}
