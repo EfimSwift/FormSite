@@ -1,4 +1,4 @@
-import { inflateRaw, deflateRaw } from "../../../vendor/pako.esm.mjs";
+import { inflateRaw } from "../../../vendor/pako.esm.mjs";
 
 const SIG_LOCAL = 0x04034b50;
 const SIG_CENTRAL = 0x02014b50;
@@ -15,69 +15,89 @@ function crc32(buf) {
   return ~c >>> 0;
 }
 
-/** Распаковка .xlsx (ZIP, method 0 или 8). */
-export function unzipBytes(buffer) {
+function findEocdOffset(buffer) {
   const view = new DataView(buffer.buffer, buffer.byteOffset, buffer.byteLength);
-  const files = {};
-  let offset = 0;
-  while (offset + 30 <= buffer.length) {
-    const sig = view.getUint32(offset, true);
-    if (sig === SIG_LOCAL) {
-      const method = view.getUint16(offset + 8, true);
-      const compSize = view.getUint32(offset + 18, true);
-      const uncompSize = view.getUint32(offset + 22, true);
-      const nameLen = view.getUint16(offset + 26, true);
-      const extraLen = view.getUint16(offset + 28, true);
-      const nameStart = offset + 30;
-      const name = new TextDecoder().decode(
-        buffer.subarray(nameStart, nameStart + nameLen),
-      );
-      const dataStart = nameStart + nameLen + extraLen;
-      const compData = buffer.subarray(dataStart, dataStart + compSize);
-      let data;
-      if (method === 0) data = compData;
-      else if (method === 8) {
-        data = inflateRaw(compData);
-        if (uncompSize && data.length !== uncompSize) {
-          /* tolerate */
-        }
-      } else {
-        throw new Error(`ZIP method ${method} not supported`);
-      }
-      files[name] = data;
-      offset = dataStart + compSize;
-      continue;
-    }
-    if (sig === SIG_CENTRAL || sig === SIG_EOCD) break;
-    offset += 1;
+  const min = Math.max(0, buffer.length - 65557);
+  for (let i = buffer.length - 22; i >= min; i--) {
+    if (view.getUint32(i, true) === SIG_EOCD) return i;
   }
-  return files;
+  throw new Error("ZIP: EOCD не знайдено");
 }
 
-export function zipBytes(files) {
+/** Читает все записи через Central Directory (надёжно для .xlsx). */
+export function readZipEntries(buffer) {
+  const view = new DataView(buffer.buffer, buffer.byteOffset, buffer.byteLength);
+  const eocd = findEocdOffset(buffer);
+  const cdSize = view.getUint32(eocd + 12, true);
+  const cdOffset = view.getUint32(eocd + 16, true);
+  const count = view.getUint16(eocd + 10, true);
+  const entries = [];
+  let pos = cdOffset;
+
+  for (let i = 0; i < count; i++) {
+    if (view.getUint32(pos, true) !== SIG_CENTRAL) {
+      throw new Error("ZIP: пошкоджений central directory");
+    }
+    const method = view.getUint16(pos + 10, true);
+    const compSize = view.getUint32(pos + 20, true);
+    const uncompSize = view.getUint32(pos + 24, true);
+    const nameLen = view.getUint16(pos + 28, true);
+    const extraLen = view.getUint16(pos + 30, true);
+    const commentLen = view.getUint16(pos + 32, true);
+    const localOffset = view.getUint32(pos + 42, true);
+    const nameStart = pos + 46;
+    const name = new TextDecoder().decode(
+      buffer.subarray(nameStart, nameStart + nameLen),
+    );
+
+    const lh = localOffset;
+    if (view.getUint32(lh, true) !== SIG_LOCAL) {
+      throw new Error(`ZIP: local header for ${name}`);
+    }
+    const localNameLen = view.getUint16(lh + 26, true);
+    const localExtraLen = view.getUint16(lh + 28, true);
+    const dataStart = lh + 30 + localNameLen + localExtraLen;
+    const compData = buffer.subarray(dataStart, dataStart + compSize);
+
+    let data;
+    if (method === 0) data = compData;
+    else if (method === 8) data = inflateRaw(compData);
+    else throw new Error(`ZIP method ${method} для ${name}`);
+
+    if (uncompSize && data.length !== uncompSize) {
+      /* допускаємо */
+    }
+
+    entries.push({ name, data });
+    pos = nameStart + nameLen + extraLen + commentLen;
+  }
+  return entries;
+}
+
+/** Собирает ZIP (STORE, без сжатия) — Excel/OpenXML это принимает. */
+export function buildZipStore(entries) {
+  const enc = new TextEncoder();
   const chunks = [];
   const central = [];
   let offset = 0;
-  const enc = new TextEncoder();
 
-  for (const [name, data] of Object.entries(files)) {
+  for (const { name, data } of entries) {
     const nameBytes = enc.encode(name);
-    const compressed = deflateRaw(data);
     const crc = crc32(data);
 
-    const local = new Uint8Array(30 + nameBytes.length + compressed.length);
+    const local = new Uint8Array(30 + nameBytes.length + data.length);
     const lv = new DataView(local.buffer);
     lv.setUint32(0, SIG_LOCAL, true);
     lv.setUint16(4, 20, true);
-    lv.setUint16(8, 8, true);
+    lv.setUint16(8, 0, true);
     lv.setUint16(10, 0, true);
     lv.setUint32(14, crc, true);
-    lv.setUint32(18, compressed.length, true);
+    lv.setUint32(18, data.length, true);
     lv.setUint32(22, data.length, true);
     lv.setUint16(26, nameBytes.length, true);
     lv.setUint16(28, 0, true);
     local.set(nameBytes, 30);
-    local.set(compressed, 30 + nameBytes.length);
+    local.set(data, 30 + nameBytes.length);
     chunks.push(local);
 
     const cen = new Uint8Array(46 + nameBytes.length);
@@ -85,10 +105,10 @@ export function zipBytes(files) {
     cv.setUint32(0, SIG_CENTRAL, true);
     cv.setUint16(4, 20, true);
     cv.setUint16(6, 20, true);
-    cv.setUint16(8, 8, true);
+    cv.setUint16(8, 0, true);
     cv.setUint16(10, 0, true);
     cv.setUint32(16, crc, true);
-    cv.setUint32(20, compressed.length, true);
+    cv.setUint32(20, data.length, true);
     cv.setUint32(24, data.length, true);
     cv.setUint16(28, nameBytes.length, true);
     cv.setUint16(30, 0, true);
@@ -113,18 +133,32 @@ export function zipBytes(files) {
   const eocd = new Uint8Array(22);
   const ev = new DataView(eocd.buffer);
   ev.setUint32(0, SIG_EOCD, true);
-  ev.setUint16(8, central.length, true);
-  ev.setUint16(10, central.length, true);
+  ev.setUint16(8, entries.length, true);
+  ev.setUint16(10, entries.length, true);
   ev.setUint32(12, centralSize, true);
   ev.setUint32(16, centralStart, true);
   chunks.push(eocd);
 
   const total = chunks.reduce((s, c) => s + c.length, 0);
   const out = new Uint8Array(total);
-  let pos = 0;
+  let p = 0;
   for (const c of chunks) {
-    out.set(c, pos);
-    pos += c.length;
+    out.set(c, p);
+    p += c.length;
   }
   return out;
+}
+
+export function patchZipEntry(buffer, entryName, newData) {
+  const entries = readZipEntries(buffer);
+  let found = false;
+  const next = entries.map((e) => {
+    if (e.name === entryName) {
+      found = true;
+      return { name: e.name, data: newData };
+    }
+    return e;
+  });
+  if (!found) throw new Error(`У ZIP немає ${entryName}`);
+  return buildZipStore(next);
 }

@@ -1,4 +1,4 @@
-import { unzipBytes, zipBytes } from "./minZip.js";
+import { patchZipEntry, readZipEntries } from "./minZip.js";
 import {
   applyUpdatesToSheetXml,
   buildUpdates,
@@ -11,6 +11,9 @@ async function loadTemplate(templateFile) {
   const res = await fetch(`/forms/templates/${templateFile}`);
   if (!res.ok) throw new Error(`Шаблон Excel не знайдено: ${templateFile}`);
   const bytes = new Uint8Array(await res.arrayBuffer());
+  if (bytes[0] !== 0x50 || bytes[1] !== 0x4b) {
+    throw new Error("Замість xlsx сервер віддав не ZIP (перевірте шлях шаблону)");
+  }
   cachedTemplate = { name: templateFile, bytes };
   return bytes;
 }
@@ -34,17 +37,19 @@ function downloadFileName(docId, fio) {
 export class XlsxFillExporter {
   async generate(documentDef, values, templateFile) {
     const templateBytes = await loadTemplate(templateFile);
-    const files = unzipBytes(templateBytes);
     const sheetPath = "xl/worksheets/sheet1.xml";
-    if (!files[sheetPath]) throw new Error("Некоректний шаблон xlsx");
 
-    const sheetXml = new TextDecoder("utf-8").decode(files[sheetPath]);
-    const updates = buildUpdates(documentDef, values);
-    files[sheetPath] = new TextEncoder().encode(
-      applyUpdatesToSheetXml(sheetXml, updates),
+    const sheetEntry = readZipEntries(templateBytes).find(
+      (e) => e.name === sheetPath,
     );
+    if (!sheetEntry) throw new Error("Некоректний шаблон xlsx");
 
-    const bytes = zipBytes(files);
+    const sheetXml = new TextDecoder("utf-8").decode(sheetEntry.data);
+    const updates = buildUpdates(documentDef, values);
+    const patched = applyUpdatesToSheetXml(sheetXml, updates);
+    const newSheetBytes = new TextEncoder().encode(patched);
+
+    const bytes = patchZipEntry(templateBytes, sheetPath, newSheetBytes);
     const fio = values.fio ?? values.email ?? "";
     return {
       fileName: downloadFileName(documentDef.id, fio),

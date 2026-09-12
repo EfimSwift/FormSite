@@ -55,15 +55,24 @@ async function loadBodyFont(pdf) {
   return pdf.embedFont(new Uint8Array(cachedFontBytes), { subset: false });
 }
 
+function isPdfBinary(bytes) {
+  return bytes?.byteLength >= 5 && bytes[0] === 0x25 && bytes[1] === 0x50;
+}
+
 async function loadPdfTemplate(file) {
   if (cachedPdfTemplate?.name === file) return cachedPdfTemplate.bytes;
   const res = await fetch(`/forms/templates/${file}`);
   if (!res.ok) {
     throw new Error(
-      "PDF-шаблон не знайдено. У репозиторії має бути forms/templates/interactive-board-print.pdf",
+      "PDF-шаблон не знайдено (forms/templates/interactive-board-print.pdf). Зробіть push у git і redeploy.",
     );
   }
   const bytes = new Uint8Array(await res.arrayBuffer());
+  if (!isPdfBinary(bytes)) {
+    throw new Error(
+      "Замість PDF сервер віддав HTML (404). Перевірте, що interactive-board-print.pdf задеплоєно.",
+    );
+  }
   cachedPdfTemplate = { name: file, bytes };
   return bytes;
 }
@@ -113,13 +122,15 @@ export class XlsxPdfGenerator {
     const pdfTemplateFile =
       documentDef.pdfTemplateFile ?? "interactive-board-print.pdf";
     const templateBytes = await loadPdfTemplate(pdfTemplateFile);
-    const src = await PDFDocument.load(templateBytes);
-    const pdf = await PDFDocument.create();
+    const pdf = await PDFDocument.load(templateBytes);
     const font = await loadBodyFont(pdf);
+    const page = pdf.getPages()[0];
+    if (!page) throw new Error("PDF-шаблон без сторінок");
 
-    const [embedded] = await pdf.copyPages(src, [0]);
-    const page = pdf.addPage([embedded.getWidth(), embedded.getHeight()]);
-    page.drawPage(embedded);
+    const { width, height } = page.getSize();
+    if (!Number.isFinite(width) || !Number.isFinite(height)) {
+      throw new Error("Некоректний розмір PDF-шаблону");
+    }
 
     for (const field of documentDef.fields) {
       const text = String(values[field.id] ?? "").trim();

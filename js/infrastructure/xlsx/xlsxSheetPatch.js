@@ -9,20 +9,16 @@ function xmlText(text) {
 }
 
 function patchCellBlock(block, value) {
-  let b = block.replace(/>\s*<v>[\s\S]*?<\/v>\s*/g, ">");
-  b = b.replace(/>\s*<is>[\s\S]*?<\/is>\s*/g, ">");
-  b = b.replace(/\s+t="[^"]*"/g, "");
+  const open = block.match(/^<c r="[^"]+"[^>]*>/);
+  if (!open) return block;
+  const openTag = open[0].replace(/\s+t="[^"]*"/g, "").replace(/\/>$/, ">");
 
   if (value == null || value === "") {
-    if (/\/>$/.test(b.trim())) return b;
-    return b.replace(/>[\s\S]*<\/c>$/, "/>");
+    return openTag.replace(/>$/, "/>");
   }
 
   const inner = xmlText(value);
-  if (/\/>$/.test(b.trim())) {
-    return b.trim().replace(/\/>\s*$/, ` t="inlineStr">${inner}</c>`);
-  }
-  return b.replace(/>[\s\S]*<\/c>$/, ` t="inlineStr">${inner}</c>`);
+  return `${openTag.replace(/>$/, "")} t="inlineStr">${inner}</c>`;
 }
 
 export function setCellInSheetXml(sheetXml, ref, value) {
