@@ -1,0 +1,6 @@
+name = "formsite"
+compatibility_date = "2024-09-01"
+pages_build_output_dir = "."
+
+# Build command у Cloudflare Pages: (порожньо)
+# Environment: BASIC_AUTH_USER, BASIC_AUTH_PASS
