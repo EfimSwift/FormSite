@@ -43,6 +43,10 @@ $ps.LeftMargin = $xl.InchesToPoints(0.7)
 $ps.RightMargin = $xl.InchesToPoints(0.7)
 $ps.TopMargin = $xl.InchesToPoints(0.75)
 $ps.BottomMargin = $xl.InchesToPoints(0.75)
+# Підписи під таблицею: верхній край лівого й правого блоків на одній лінії (лише шаблон).
+$ws.Rows('17:18').VerticalAlignment = -4160
+$ws.Range('A17').WrapText = $true
+$ws.Range('A17').HorizontalAlignment = -4131
 $ws.ExportAsFixedFormat(0, '{pdf.resolve()}')
 $wb.Close($false)
 $xl.Quit()
@@ -99,18 +103,22 @@ def extract_cells(t: str) -> dict[str, dict[str, float]]:
     if not r10_header or not r14_header:
         raise SystemExit("Не знайдено смуги рядків 10/14 у PDF")
 
-    cols10 = sorted(
-        [f for f in fills if abs(f[1] - r10_header[0]) < 2 and f[2] > 50],
-        key=lambda f: f[0],
-    )
     cols14_b = next((f for f in fills if 575 <= f[1] <= 582 and 85 < f[2] < 95), None)
+    b_x = round(cols14_b[0], 2) if cols14_b else 94.32
+    b_w = round(cols14_b[2], 2) if cols14_b else 90.38
 
-    def boxes_from_cols(cols: list, data_y: float, data_h: float, suffix: str):
+    col_specs = [
+        ("B", b_x, b_w if b_w else 91.34),
+        ("C", 185.1, 111.8),
+        ("D", 296.9, 97.5),
+        ("E", 395.4, 75.9),
+        ("F", 472.2, 66.7),
+    ]
+
+    def row_cells(data_y: float, data_h: float, suffix: str) -> dict[str, dict[str, float]]:
         out: dict[str, dict[str, float]] = {}
-        letters = "BCDEF"
-        for i, col in enumerate(cols[:5]):
-            x, _, w, _ = col
-            out[f"{letters[i]}{suffix}"] = {
+        for letter, x, w in col_specs:
+            out[f"{letter}{suffix}"] = {
                 "x": round(x, 2),
                 "y": round(data_y, 2),
                 "w": round(w, 2),
@@ -118,22 +126,8 @@ def extract_cells(t: str) -> dict[str, dict[str, float]]:
             }
         return out
 
-    cells = boxes_from_cols(
-        cols10 if len(cols10) >= 5 else fills,
-        r10_data[0],
-        r10_data[1],
-        "10",
-    )
-
-    hy, hh = r14_header
-    dy, dh = r14_data
-    if cols14_b:
-        bx, _, bw, _ = cols14_b
-        cells["B14"] = {"x": round(bx, 2), "y": round(dy, 2), "w": round(bw, 2), "h": round(dh, 2)}
-    cells["C14"] = {"x": 185.1, "y": round(dy, 2), "w": 111.8, "h": round(dh, 2)}
-    cells["D14"] = {"x": 296.9, "y": round(dy, 2), "w": 97.5, "h": round(dh, 2)}
-    cells["E14"] = {"x": 395.4, "y": round(dy, 2), "w": 75.9, "h": round(dh, 2)}
-    cells["F14"] = {"x": 472.2, "y": round(dy, 2), "w": 66.7, "h": round(dh, 2)}
+    cells = row_cells(r10_data[0], r10_data[1], "10")
+    cells.update(row_cells(r14_data[0], r14_data[1], "14"))
 
     return cells
 
@@ -151,11 +145,6 @@ def write_js(cells: dict[str, dict[str, float]]) -> None:
         lines.append(
             f'  {key}: {{ page: 0, x: {c["x"]}, y: {c["y"]}, w: {c["w"]}, h: {c["h"]} }},',
         )
-    lines.append("};")
-    lines.append("")
-    lines.append("export const INTERACTIVE_BOARD_PDF_FOOTER_PAIR = {")
-    lines.append('  left: { page: 0, x: 51.4, y: 455.0, w: 330.0, h: 38.0 },')
-    lines.append('  right: { page: 0, x: 395.4, y: 455.0, w: 90.0, h: 38.0 },')
     lines.append("};")
     lines.append("")
     OUT_JS.write_text("\n".join(lines), encoding="utf-8")

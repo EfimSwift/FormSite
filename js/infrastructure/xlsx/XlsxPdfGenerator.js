@@ -1,28 +1,22 @@
 import { PDFDocument } from "../../../vendor/pdf-lib.esm.min.js";
 import fontkit from "../../../vendor/fontkit.es.js";
-import {
-  INTERACTIVE_BOARD_PDF_CELLS,
-  INTERACTIVE_BOARD_PDF_FOOTER_PAIR,
-} from "./interactiveBoardPdfPlacements.js";
-import {
-  drawTextInCellWithPages,
-  drawTopAlignedPair,
-} from "./pdfCellText.js";
+import { INTERACTIVE_BOARD_PDF_CELLS } from "./interactiveBoardPdfPlacements.js";
+import { drawTextInCellWithPages } from "./pdfCellText.js";
 
 let cachedFontBytes = null;
 let cachedPdfTemplate = null;
 
 const CELL_STYLE = {
-  B10: { maxSize: 8, minSize: 6, vAlign: "top", hAlign: "center" },
-  C10: { maxSize: 8, minSize: 6, vAlign: "top", hAlign: "center" },
-  D10: { maxSize: 8, minSize: 6, vAlign: "top", hAlign: "center" },
-  E10: { maxSize: 7.5, minSize: 6, vAlign: "top", hAlign: "center" },
-  F10: { maxSize: 7, minSize: 5.5, vAlign: "top", hAlign: "center" },
-  B14: { maxSize: 8, minSize: 5.5, vAlign: "top", hAlign: "center" },
-  C14: { maxSize: 7.5, minSize: 5, vAlign: "top", hAlign: "center" },
-  D14: { maxSize: 8, minSize: 6, vAlign: "top", hAlign: "center" },
-  E14: { maxSize: 7, minSize: 5.5, vAlign: "top", hAlign: "center" },
-  F14: { maxSize: 5.5, minSize: 4, vAlign: "top", hAlign: "center" },
+  B10: { maxSize: 8, minSize: 6, vAlign: "center", hAlign: "center" },
+  C10: { maxSize: 8, minSize: 6, vAlign: "center", hAlign: "center" },
+  D10: { maxSize: 8, minSize: 6, vAlign: "center", hAlign: "center" },
+  E10: { maxSize: 7.5, minSize: 6, vAlign: "center", hAlign: "center" },
+  F10: { maxSize: 7, minSize: 5.5, vAlign: "center", hAlign: "center" },
+  B14: { maxSize: 8, minSize: 5.5, vAlign: "center", hAlign: "center" },
+  C14: { maxSize: 7.5, minSize: 5, vAlign: "center", hAlign: "center" },
+  D14: { maxSize: 8, minSize: 6, vAlign: "center", hAlign: "center" },
+  E14: { maxSize: 7, minSize: 5.5, vAlign: "center", hAlign: "center" },
+  F14: { maxSize: 5.5, minSize: 4, vAlign: "center", hAlign: "center" },
 };
 
 function isFontBinary(bytes) {
@@ -89,15 +83,6 @@ function downloadFileName(docId, fio) {
   return `${docId}_${lat}.pdf`;
 }
 
-function footerTexts(documentDef, values) {
-  const pair = documentDef.pdfFooterPair;
-  if (!pair) return null;
-  const left = values[pair.leftField ?? "footer_left"] ?? "";
-  const right = values[pair.rightField ?? "footer_right"] ?? "";
-  if (!String(left).trim() && !String(right).trim()) return null;
-  return { left: String(left), right: String(right) };
-}
-
 export class XlsxPdfGenerator {
   async generate(documentDef, values, _templateFile) {
     const pdfTemplateFile =
@@ -105,7 +90,6 @@ export class XlsxPdfGenerator {
     const templateBytes = await loadPdfTemplate(pdfTemplateFile);
     const pdf = await PDFDocument.load(templateBytes);
     const font = await loadBodyFont(pdf);
-
     const pages = [...pdf.getPages()];
 
     for (const field of documentDef.fields) {
@@ -118,30 +102,10 @@ export class XlsxPdfGenerator {
       const style = CELL_STYLE[field.cell] ?? {
         maxSize: 8,
         minSize: 5,
-        vAlign: "top",
+        vAlign: "center",
         hAlign: "center",
       };
       drawTextInCellWithPages(pdf, pages, font, text, box, style);
-    }
-
-    const footer = footerTexts(documentDef, values);
-    if (footer) {
-      const leftBox =
-        documentDef.pdfFooterPair?.leftBox ??
-        INTERACTIVE_BOARD_PDF_FOOTER_PAIR.left;
-      const rightBox =
-        documentDef.pdfFooterPair?.rightBox ??
-        INTERACTIVE_BOARD_PDF_FOOTER_PAIR.right;
-      drawTopAlignedPair(
-        pdf,
-        pages,
-        font,
-        leftBox,
-        rightBox,
-        footer.left,
-        footer.right,
-        { maxSize: 9, minSize: 6 },
-      );
     }
 
     const bytes = await pdf.save({ useObjectStreams: false });
