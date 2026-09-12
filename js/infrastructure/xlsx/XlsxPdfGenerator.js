@@ -5,6 +5,9 @@ import fontkit from "../../../vendor/fontkit.es.js";
 let cachedFontBytes = null;
 let cachedTemplate = null;
 
+const DEFAULT_COL_WCH = 8.43;
+const DEFAULT_ROW_HPT = 16;
+
 function isFontBinary(bytes) {
   if (!bytes?.byteLength) return false;
   const v = new Uint8Array(bytes);
@@ -30,7 +33,7 @@ async function loadBodyFont(pdf) {
     throw new Error("Потрібен fonts/Arial.ttf у репозиторії");
   }
   pdf.registerFontkit(fontkit);
-  return pdf.embedFont(new Uint8Array(cachedFontBytes), { subset: true });
+  return pdf.embedFont(new Uint8Array(cachedFontBytes), { subset: false });
 }
 
 async function loadTemplate(templateFile) {
@@ -57,7 +60,7 @@ function downloadFileName(docId, fio) {
     ж: "zh", з: "z", и: "y", і: "i", ї: "i", й: "i", к: "k", л: "l",
     м: "m", н: "n", о: "o", п: "p", р: "r", с: "s", т: "t", у: "u",
     ф: "f", х: "kh", ц: "ts", ч: "ch", ш: "sh", щ: "shch", ю: "iu",
-    я: "ia", ь: "", "'": "",
+    я: "ia", ь: "", "'": "", "’": "",
   };
   let lat = "";
   for (const ch of (fio ?? "document").trim().toLowerCase()) {
@@ -67,12 +70,107 @@ function downloadFileName(docId, fio) {
   return `${docId}_${lat}.pdf`;
 }
 
+/** Ширина колонки в «символах Excel» (wch). */
+function colWch(ws, colIndex) {
+  const col = ws["!cols"]?.[colIndex];
+  if (col?.wch) return col.wch;
+  if (col?.width) return col.width;
+  return DEFAULT_COL_WCH;
+}
+
+function rowHpt(ws, rowIndex) {
+  const row = ws["!rows"]?.[rowIndex];
+  if (row?.hpt) return row.hpt;
+  if (row?.hpx) return row.hpx * 0.75;
+  return DEFAULT_ROW_HPT;
+}
+
+function buildMergeMaps(merges) {
+  const skip = new Set();
+  const spanAt = new Map();
+
+  for (const m of merges) {
+    const master = XLSX.utils.encode_cell(m.s);
+    spanAt.set(master, m);
+    for (let r = m.s.r; r <= m.e.r; r++) {
+      for (let c = m.s.c; c <= m.e.c; c++) {
+        if (r === m.s.r && c === m.s.c) continue;
+        skip.add(XLSX.utils.encode_cell({ r, c }));
+      }
+    }
+  }
+  return { skip, spanAt };
+}
+
+function regionSize(ws, m, colScale, rowHeights) {
+  let w = 0;
+  for (let c = m.s.c; c <= m.e.c; c++) {
+    w += colWch(ws, c) * colScale;
+  }
+  let h = 0;
+  for (let r = m.s.r; r <= m.e.r; r++) {
+    h += rowHeights.get(r) ?? DEFAULT_ROW_HPT;
+  }
+  return { w, h };
+}
+
+function wrapLines(text, font, size, maxWidth) {
+  const normalized = String(text).replace(/\s+/g, " ").trim();
+  if (!normalized) return [];
+  const words = normalized.split(" ");
+  const lines = [];
+  let line = "";
+  for (const word of words) {
+    const candidate = line ? `${line} ${word}` : word;
+    const width = font.widthOfTextAtSize(candidate, size);
+    if (width <= maxWidth || !line) {
+      line = candidate;
+    } else {
+      lines.push(line);
+      line = word;
+    }
+  }
+  if (line) lines.push(line);
+  return lines;
+}
+
+function drawCellText(page, font, text, x, y, w, h) {
+  const pad = 3;
+  const maxWidth = Math.max(8, w - pad * 2);
+  let size = 9;
+  if (w < 55) size = 7;
+  if (w > 120 && text.length > 60) size = 8;
+
+  let lines = wrapLines(text, font, size, maxWidth);
+  const lineH = size + 2;
+  while (lines.length * lineH > h - pad * 2 && size > 6) {
+    size -= 1;
+    lines = wrapLines(text, font, size, maxWidth);
+  }
+
+  let baseline = y + h - pad - size;
+  for (const ln of lines) {
+    if (baseline < y + pad) break;
+    page.drawText(ln, {
+      x: x + pad,
+      y: baseline,
+      size,
+      font,
+      color: rgb(0, 0, 0),
+    });
+    baseline -= lineH;
+  }
+}
+
+/** Прибираємо демо-дані з іншого блоку форми. */
+function clearOtherSections(ws, documentDef) {
+  const clearRanges = documentDef.clearCells ?? [];
+  for (const addr of clearRanges) {
+    delete ws[addr];
+  }
+}
+
 export class XlsxPdfGenerator {
-  /**
-   * @param {object} documentDef from documents.json
-   * @param {Record<string, string>} values field id -> value
-   * @param {string} templateFile
-   */
   async generate(documentDef, values, templateFile) {
     const templateBytes = await loadTemplate(templateFile);
     const wb = XLSX.read(templateBytes, { type: "array" });
@@ -82,37 +180,93 @@ export class XlsxPdfGenerator {
     for (const field of documentDef.fields) {
       setCell(ws, field.cell, values[field.id] ?? "");
     }
+    clearOtherSections(ws, documentDef);
 
     const rangeStr = documentDef.pdfRange || ws["!ref"] || "A1:F18";
     const range = XLSX.utils.decode_range(rangeStr);
+    const merges = (ws["!merges"] || []).filter((m) => {
+      return (
+        m.e.r >= range.s.r &&
+        m.s.r <= range.e.r &&
+        m.e.c >= range.s.c &&
+        m.s.c <= range.e.c
+      );
+    });
+    const { skip, spanAt } = buildMergeMaps(merges);
+
+    let totalWch = 0;
+    for (let c = range.s.c; c <= range.e.c; c++) {
+      totalWch += colWch(ws, c);
+    }
+
+    const pageW = 841.89;
+    const pageH = 595.28;
+    const margin = 32;
+    const tableW = pageW - margin * 2;
+    const colScale = tableW / totalWch;
+
+    const rowHeights = new Map();
+    let totalH = 0;
+    for (let r = range.s.r; r <= range.e.r; r++) {
+      const h = rowHpt(ws, r);
+      rowHeights.set(r, h);
+      totalH += h;
+    }
 
     const pdf = await PDFDocument.create();
     const font = await loadBodyFont(pdf);
-    const page = pdf.addPage([841.89, 595.28]);
-    const colWidth = 118;
-    const rowHeight = 15;
-    const marginX = 28;
-    const topY = 568;
+    const page = pdf.addPage([pageW, pageH]);
+
+    let tableTop = margin + (pageH - margin * 2 - totalH) / 2 + totalH;
+    if (tableTop > pageH - margin) tableTop = pageH - margin;
+
+    const colX = new Map();
+    let x = margin;
+    for (let c = range.s.c; c <= range.e.c; c++) {
+      colX.set(c, x);
+      x += colWch(ws, c) * colScale;
+    }
+
+    const rowY = new Map();
+    let y = tableTop;
+    for (let r = range.s.r; r <= range.e.r; r++) {
+      const h = rowHeights.get(r);
+      y -= h;
+      rowY.set(r, y);
+    }
+
+    const border = rgb(0.35, 0.35, 0.38);
+    const fillHeader = rgb(0.96, 0.96, 0.97);
+
+    const headerRows = new Set([8, 9, 13]);
 
     for (let r = range.s.r; r <= range.e.r; r++) {
       for (let c = range.s.c; c <= range.e.c; c++) {
         const addr = XLSX.utils.encode_cell({ r, c });
-        const cell = ws[addr];
-        if (!cell?.v && cell?.v !== 0) continue;
-        const text = String(cell.v).replace(/\s+/g, " ").trim();
-        if (!text) continue;
-        const x = marginX + (c - range.s.c) * colWidth;
-        const y = topY - (r - range.s.r) * rowHeight;
-        const size = text.length > 45 ? 7 : 8;
-        page.drawText(text, {
-          x,
-          y,
-          size,
-          font,
-          color: rgb(0.05, 0.05, 0.08),
-          maxWidth: colWidth - 6,
-          lineHeight: size + 2,
+        if (skip.has(addr)) continue;
+
+        const m = spanAt.get(addr) ?? {
+          s: { r, c },
+          e: { r, c },
+        };
+        const { w, h } = regionSize(ws, m, colScale, rowHeights);
+        const x0 = colX.get(m.s.c);
+        const y0 = rowY.get(m.s.r);
+
+        page.drawRectangle({
+          x: x0,
+          y: y0,
+          width: w,
+          height: h,
+          borderColor: border,
+          borderWidth: 0.6,
+          color: headerRows.has(r) ? fillHeader : undefined,
         });
+
+        const cell = ws[addr];
+        const raw = cell?.v;
+        if (raw === undefined || raw === null || raw === "") continue;
+        drawCellText(page, font, String(raw), x0, y0, w, h);
       }
     }
 

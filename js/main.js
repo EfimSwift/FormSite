@@ -1,4 +1,4 @@
-import { documentService, downloadPdf } from "./app/compositionRoot.js";
+import { documentService, downloadPdf, downloadXlsx } from "./app/compositionRoot.js";
 import { authService } from "./infrastructure/auth/AuthService.js";
 
 const app = document.querySelector("#app");
@@ -120,9 +120,16 @@ function renderApp() {
     }
     dataCard.append(grid);
 
-    const genBtn = el("button", { type: "button" }, "3. Згенерувати PDF");
-    genBtn.disabled = state.busy;
-    genBtn.addEventListener("click", async () => {
+    const genPdfBtn = el("button", { type: "button" }, "Згенерувати PDF");
+    genPdfBtn.disabled = state.busy;
+    const genXlsxBtn = el(
+      "button",
+      { type: "button", className: "secondary" },
+      "Завантажити Excel (.xlsx)",
+    );
+    genXlsxBtn.disabled = state.busy;
+
+    genPdfBtn.addEventListener("click", async () => {
       setState({ busy: true, error: null });
       try {
         const pdf = await documentService.generatePdf(
@@ -138,7 +145,28 @@ function renderApp() {
         });
       }
     });
-    dataCard.append(el("div", { className: "actions" }, genBtn));
+
+    genXlsxBtn.addEventListener("click", async () => {
+      setState({ busy: true, error: null });
+      try {
+        const xlsx = await documentService.generateXlsx(
+          selectedDoc.id,
+          fieldValues,
+        );
+        downloadXlsx(xlsx.fileName, xlsx.bytes);
+        setState({ busy: false });
+      } catch (e) {
+        setState({
+          busy: false,
+          error: e instanceof Error ? e.message : "Помилка",
+        });
+      }
+    });
+
+    dataCard.append(
+      el("p", { className: "hint" }, "PDF — друкована таблиця як у бланку. Excel — той самий шаблон із вашими комірками (100% як у файлі на дошці)."),
+      el("div", { className: "actions" }, genPdfBtn, genXlsxBtn),
+    );
     layout.append(dataCard);
   }
 

@@ -37,7 +37,8 @@
           "type": "text"
         }
       ],
-      "pdfRange": "A4:F10"
+      "pdfRange": "A4:F10",
+      "clearCells": ["A14", "B14", "C14", "D14", "E14", "F14"]
     },
     {
       "id": "device-end-user",
@@ -75,7 +76,8 @@
           "type": "text"
         }
       ],
-      "pdfRange": "A4:F14"
+      "pdfRange": "A12:F18",
+      "clearCells": ["A10", "B10", "C10", "D10", "E10", "F10"]
     }
   ]
 }
