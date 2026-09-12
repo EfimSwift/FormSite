@@ -1,15 +1,6 @@
-name = "formsite"
-compatibility_date = "2024-09-01"
-
-# Pages: npx wrangler pages deploy .
-pages_build_output_dir = "."
-
-# Workers Builds + npx wrangler deploy (запасной вариант)
-[assets]
-directory = "."
-not_found_handling = "single-page-application"
-
-# Build command: порожньо
-# Workers Builds Deploy command: npx wrangler pages deploy .
-# Environment (Pages): BASIC_AUTH_USER, BASIC_AUTH_PASS
-
+name = "formsite"
+compatibility_date = "2024-09-01"
+
+[assets]
+directory = "."
+not_found_handling = "single-page-application"
