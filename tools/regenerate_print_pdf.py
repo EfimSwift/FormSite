@@ -71,62 +71,69 @@ def first_stream_text(pdf: Path) -> str:
 
 
 def extract_cells(t: str) -> dict[str, dict[str, float]]:
-    """Прямокутники заливки рядків даних у PDF-потоці."""
+    """Шапка + рядок даних однією смугою; дані — смуга безпосередньо під шапкою."""
     fills: list[tuple[float, float, float, float]] = []
     for m in re.finditer(
         r"(\d+\.?\d*)\s+(\d+\.?\d*)\s+(\d+\.?\d*)\s+(\d+\.?\d*)\s+re",
         t,
     ):
         x, y, w, h = map(float, m.groups())
-        if w < 35 or h < 20 or h > 70:
+        if w < 35 or h < 15 or h > 70:
             continue
         if x < 90:
             continue
         fills.append((x, y, w, h))
 
-    def row_boxes(y_min: float, y_max: float, h_min: float, h_max: float):
-        row = [f for f in fills if y_min <= f[1] <= y_max and h_min <= f[3] <= h_max]
-        row.sort(key=lambda f: f[0])
-        return row
+    def header_and_data(y_min: float, y_max: float):
+        band = [f for f in fills if y_min <= f[1] <= y_max]
+        if not band:
+            return None, None
+        header_y = max(f[1] for f in band)
+        header = next(f for f in band if f[1] == header_y)
+        hx, hy, hw, hh = header
+        data_y = hy - hh
+        return (hy, hh), (data_y, hh)
 
-    r10 = row_boxes(645, 652, 38, 45)
-    r14 = row_boxes(576, 582, 28, 32)
-    if len(r10) < 4 or len(r14) < 2:
-        raise SystemExit("Не вдалося знайти рядки 10/14 у PDF — перевірте шаблон")
+    r10_header, r10_data = header_and_data(640, 652)
+    r14_header, r14_data = header_and_data(575, 582)
+    if not r10_header or not r14_header:
+        raise SystemExit("Не знайдено смуги рядків 10/14 у PDF")
 
-    def assign(row: list[tuple], suffix: str) -> dict[str, dict[str, float]]:
-        cols = "BCDEF"[: len(row)]
+    cols10 = sorted(
+        [f for f in fills if abs(f[1] - r10_header[0]) < 2 and f[2] > 50],
+        key=lambda f: f[0],
+    )
+    cols14_b = next((f for f in fills if 575 <= f[1] <= 582 and 85 < f[2] < 95), None)
+
+    def boxes_from_cols(cols: list, data_y: float, data_h: float, suffix: str):
         out: dict[str, dict[str, float]] = {}
-        for col, (x, y, w, h) in zip(cols, row, strict=False):
-            out[f"{col}{suffix}"] = {
+        letters = "BCDEF"
+        for i, col in enumerate(cols[:5]):
+            x, _, w, _ = col
+            out[f"{letters[i]}{suffix}"] = {
                 "x": round(x, 2),
-                "y": round(y, 2),
+                "y": round(data_y, 2),
                 "w": round(w, 2),
-                "h": round(h, 2),
+                "h": round(data_h, 2),
             }
         return out
 
-    if len(r10) >= 5:
-        cells = assign(r10[:5], "10")
-    else:
-        cells = {}
-        b = r10[0]
-        cells["B10"] = {"x": b[0], "y": b[1], "w": b[2], "h": b[3]}
-        for i, col in enumerate("CDEF", start=1):
-            if i < len(r10):
-                x, y, w, h = r10[i]
-                cells[f"{col}10"] = {"x": x, "y": y, "w": w, "h": h}
+    cells = boxes_from_cols(
+        cols10 if len(cols10) >= 5 else fills,
+        r10_data[0],
+        r10_data[1],
+        "10",
+    )
 
-    if len(r14) >= 5:
-        cells.update(assign(r14[:5], "14"))
-    else:
-        b = next((f for f in r14 if f[0] < 120), r14[0])
-        cells["B14"] = {"x": b[0], "y": b[1], "w": b[2], "h": b[3]}
-        f = next((f for f in r14 if f[0] > 450), r14[-1])
-        cells["F14"] = {"x": f[0], "y": f[1], "w": f[2], "h": f[3]}
-        cells["C14"] = {"x": 185.1, "y": b[1], "w": 111.8, "h": b[3]}
-        cells["D14"] = {"x": 296.9, "y": b[1], "w": 97.5, "h": b[3]}
-        cells["E14"] = {"x": 395.4, "y": b[1], "w": 75.9, "h": b[3]}
+    hy, hh = r14_header
+    dy, dh = r14_data
+    if cols14_b:
+        bx, _, bw, _ = cols14_b
+        cells["B14"] = {"x": round(bx, 2), "y": round(dy, 2), "w": round(bw, 2), "h": round(dh, 2)}
+    cells["C14"] = {"x": 185.1, "y": round(dy, 2), "w": 111.8, "h": round(dh, 2)}
+    cells["D14"] = {"x": 296.9, "y": round(dy, 2), "w": 97.5, "h": round(dh, 2)}
+    cells["E14"] = {"x": 395.4, "y": round(dy, 2), "w": 75.9, "h": round(dh, 2)}
+    cells["F14"] = {"x": 472.2, "y": round(dy, 2), "w": 66.7, "h": round(dh, 2)}
 
     return cells
 
